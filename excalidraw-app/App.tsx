@@ -16,9 +16,7 @@ import {
 } from "@excalidraw/excalidraw/components/CommandPalette/CommandPalette";
 import { ErrorDialog } from "@excalidraw/excalidraw/components/ErrorDialog";
 import { OverwriteConfirmDialog } from "@excalidraw/excalidraw/components/OverwriteConfirm/OverwriteConfirm";
-import { openConfirmModal } from "@excalidraw/excalidraw/components/OverwriteConfirm/OverwriteConfirmState";
 import { ShareableLinkDialog } from "@excalidraw/excalidraw/components/ShareableLinkDialog";
-import Trans from "@excalidraw/excalidraw/components/Trans";
 import {
   APP_NAME,
   EVENT,
@@ -122,9 +120,10 @@ import {
   canvasStorageUnavailableAtom,
   refreshCanvasState,
 } from "./data/canvasAtoms";
-import { setCanvasEditorReady } from "./data/canvasActions";
+import { createNewCanvas, setCanvasEditorReady } from "./data/canvasActions";
 import { bootstrapCanvases } from "./data/canvasMigration";
-import { loadActiveCanvasState } from "./data/canvasStore";
+import { createCanvas, loadActiveCanvasState } from "./data/canvasStore";
+import { importFileAsCanvas, isExcalidrawSceneFile } from "./data/canvasImport";
 
 import { loadFilesFromFirebase } from "./data/firebase";
 import {
@@ -205,24 +204,11 @@ if (window.self !== window.top) {
   }
 }
 
-const shareableLinkConfirmDialog = {
-  title: t("overwriteConfirm.modal.shareableLink.title"),
-  description: (
-    <Trans
-      i18nKey="overwriteConfirm.modal.shareableLink.description"
-      bold={(text) => <strong>{text}</strong>}
-      br={() => <br />}
-    />
-  ),
-  actionLabel: t("overwriteConfirm.modal.shareableLink.button"),
-  color: "danger",
-} as const;
-
 const initializeScene = async (opts: {
   collabAPI: CollabAPI | null;
   excalidrawAPI: ExcalidrawImperativeAPI;
 }): Promise<
-  { scene: ExcalidrawInitialDataState | null } & (
+  { scene: ExcalidrawInitialDataState | null; importAsNewCanvas?: boolean } & (
     | { isExternalScene: true; id: string; key: string }
     | { isExternalScene: false; id?: null; key?: null }
   )
@@ -251,58 +237,34 @@ const initializeScene = async (opts: {
     appState: restoreAppState(localDataState?.appState, null),
   };
 
-  let roomLinkData = getCollaborationLinkData(window.location.href);
+  const roomLinkData = getCollaborationLinkData(window.location.href);
   const isExternalScene = !!(id || jsonBackendMatch || roomLinkData);
   if (isExternalScene) {
-    if (
-      // don't prompt if scene is empty
-      !scene.elements.length ||
-      // don't prompt for collab scenes because we don't override local storage
-      roomLinkData ||
-      // otherwise, prompt whether user wants to override current scene
-      (await openConfirmModal(shareableLinkConfirmDialog))
-    ) {
-      if (jsonBackendMatch) {
-        const imported = await importFromBackend(
-          jsonBackendMatch[1],
-          jsonBackendMatch[2],
-        );
+    // shared links never overwrite anything: `#json` is stored as a new canvas
+    if (jsonBackendMatch) {
+      const imported = await importFromBackend(
+        jsonBackendMatch[1],
+        jsonBackendMatch[2],
+      );
 
-        scene = {
-          elements: bumpElementVersions(
-            restoreElements(imported.elements, null, {
-              repairBindings: true,
-              deleteInvisibleElements: true,
-            }),
-            localDataState?.elements,
-          ),
-          appState: restoreAppState(
-            imported.appState,
-            // local appState when importing from backend to ensure we restore
-            // localStorage user settings which we do not persist on server.
-            localDataState?.appState,
-          ),
-        };
-      }
-      scene.scrollToContent = true;
-      if (!roomLinkData) {
-        window.history.replaceState({}, APP_NAME, window.location.origin);
-      }
-    } else {
-      // https://github.com/excalidraw/excalidraw/issues/1919
-      if (document.hidden) {
-        return new Promise((resolve, reject) => {
-          window.addEventListener(
-            "focus",
-            () => initializeScene(opts).then(resolve).catch(reject),
-            {
-              once: true,
-            },
-          );
-        });
-      }
-
-      roomLinkData = null;
+      scene = {
+        elements: bumpElementVersions(
+          restoreElements(imported.elements, null, {
+            repairBindings: true,
+            deleteInvisibleElements: true,
+          }),
+          localDataState?.elements,
+        ),
+        appState: restoreAppState(
+          imported.appState,
+          // local appState when importing from backend to ensure we restore
+          // localStorage user settings which we do not persist on server.
+          localDataState?.appState,
+        ),
+      };
+    }
+    scene.scrollToContent = true;
+    if (!roomLinkData) {
       window.history.replaceState({}, APP_NAME, window.location.origin);
     }
   } else if (externalUrlMatch) {
@@ -312,12 +274,7 @@ const initializeScene = async (opts: {
     try {
       const request = await fetch(window.decodeURIComponent(url));
       const data = await loadFromBlob(await request.blob(), null, null);
-      if (
-        !scene.elements.length ||
-        (await openConfirmModal(shareableLinkConfirmDialog))
-      ) {
-        return { scene: data, isExternalScene };
-      }
+      return { scene: data, isExternalScene, importAsNewCanvas: true };
     } catch (error: any) {
       return {
         scene: {
@@ -370,8 +327,9 @@ const initializeScene = async (opts: {
           isExternalScene,
           id: jsonBackendMatch[1],
           key: jsonBackendMatch[2],
+          importAsNewCanvas: true,
         }
-      : { scene, isExternalScene: false };
+      : { scene, isExternalScene: false, importAsNewCanvas: false };
   }
   return { scene: null, isExternalScene: false };
 };
@@ -580,6 +538,15 @@ const ExcalidrawWrapper = () => {
         return initializeScene({ collabAPI, excalidrawAPI });
       })
       .then(async (data) => {
+        if (data.importAsNewCanvas) {
+          // the editor is still empty, so nothing of the previous canvas can be overwritten
+          try {
+            await createCanvas({ activate: true });
+            await refreshCanvasState();
+          } catch (error) {
+            console.error(error);
+          }
+        }
         loadImages(data, /* isInitialLoad */ true);
         initialStatePromiseRef.current.promise.resolve(data.scene);
         setCanvasEditorReady(true);
@@ -597,7 +564,10 @@ const ExcalidrawWrapper = () => {
         }
         excalidrawAPI.updateScene({ appState: { isLoading: true } });
 
-        initializeScene({ collabAPI, excalidrawAPI }).then((data) => {
+        initializeScene({ collabAPI, excalidrawAPI }).then(async (data) => {
+          if (data.importAsNewCanvas) {
+            await createNewCanvas(excalidrawAPI);
+          }
           loadImages(data);
           if (data.scene) {
             excalidrawAPI.updateScene({
@@ -711,6 +681,35 @@ const ExcalidrawWrapper = () => {
       );
     };
   }, [isCollabDisabled, collabAPI, excalidrawAPI, setLangCode, loadImages]);
+
+  useEffect(() => {
+    if (!excalidrawAPI) {
+      return;
+    }
+    // capture phase: runs before the editor, which would replace the scene
+    const onDrop = async (event: DragEvent) => {
+      const files = Array.from(event.dataTransfer?.files ?? []).filter(
+        isExcalidrawSceneFile,
+      );
+      if (!files.length) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      for (const file of files) {
+        try {
+          await importFileAsCanvas(excalidrawAPI, file);
+        } catch (error: any) {
+          excalidrawAPI.setToast({
+            message: error?.message || "No se pudo importar el archivo",
+            closable: true,
+          });
+        }
+      }
+    };
+    window.addEventListener("drop", onDrop, true);
+    return () => window.removeEventListener("drop", onDrop, true);
+  }, [excalidrawAPI]);
 
   useEffect(() => {
     const unloadHandler = (event: BeforeUnloadEvent) => {
@@ -980,6 +979,8 @@ const ExcalidrawWrapper = () => {
         onPointerUpdate={collabAPI?.onPointerUpdate}
         UIOptions={{
           canvasActions: {
+            // opening a file always creates a new canvas (see "Abrir como canvas nuevo")
+            loadScene: false,
             toggleTheme: true,
             export: {
               onExportToBackend,

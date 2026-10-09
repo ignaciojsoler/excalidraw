@@ -315,7 +315,7 @@ export const deleteCanvasFiles = async (
 
 export const toStoredScene = (
   elements: readonly ExcalidrawElement[],
-  appState: AppState,
+  appState: Partial<AppState>,
 ): CanvasScene => {
   const _appState = clearAppStateForLocalStorage(appState);
 

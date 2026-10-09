@@ -19,6 +19,8 @@ import {
   listCanvasFiles,
 } from "../../data/canvasStore";
 
+import { pickAndImportFiles } from "../../data/canvasImport";
+
 import { CanvasList } from "./CanvasList";
 
 export const CanvasSidebar = () => {
@@ -115,6 +117,14 @@ export const CanvasSidebar = () => {
       onDuplicate={(id) => run(() => duplicateCanvasAction(excalidrawAPI, id))}
       onDelete={confirmDelete}
       onExport={exportOne}
+      footer={
+        <button
+          type="button"
+          onClick={() => run(() => pickAndImportFiles(excalidrawAPI))}
+        >
+          Importar archivo
+        </button>
+      }
     />
   );
 };

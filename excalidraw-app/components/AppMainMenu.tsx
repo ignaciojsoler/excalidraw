@@ -1,10 +1,12 @@
+import { getShortcutFromShortcutName } from "@excalidraw/excalidraw/actions/shortcuts";
 import {
   loginIcon,
   ExcalLogo,
   eyeIcon,
+  LoadIcon,
 } from "@excalidraw/excalidraw/components/icons";
 import { useI18n } from "@excalidraw/excalidraw/i18n";
-import { MainMenu } from "@excalidraw/excalidraw/index";
+import { MainMenu, useExcalidrawAPI } from "@excalidraw/excalidraw/index";
 import React from "react";
 
 import { isDevEnv } from "@excalidraw/common";
@@ -13,6 +15,7 @@ import type { Theme } from "@excalidraw/element/types";
 
 import { LanguageList } from "../app-language/LanguageList";
 import { isExcalidrawPlusSignedUser } from "../app_constants";
+import { pickAndImportFiles } from "../data/canvasImport";
 
 import { saveDebugState } from "./DebugCanvas";
 
@@ -24,9 +27,23 @@ export const AppMainMenu: React.FC<{
   refresh: () => void;
 }> = React.memo((props) => {
   const { t } = useI18n();
+  const api = useExcalidrawAPI();
   return (
     <MainMenu>
-      <MainMenu.DefaultItems.LoadScene />
+      <MainMenu.Item
+        icon={LoadIcon}
+        onSelect={() =>
+          api &&
+          pickAndImportFiles(api).catch((error) =>
+            api.setToast({ message: error.message, closable: true }),
+          )
+        }
+        data-testid="load-button"
+        shortcut={getShortcutFromShortcutName("loadScene")}
+        aria-label="Abrir como canvas nuevo"
+      >
+        Abrir como canvas nuevo
+      </MainMenu.Item>
       <MainMenu.DefaultItems.SaveToActiveFile />
       <MainMenu.DefaultItems.Export />
       <MainMenu.DefaultItems.SaveAsImage />

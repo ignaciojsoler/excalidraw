@@ -2,9 +2,9 @@ import React, { useState } from "react";
 
 import { formatRelativeTime } from "./formatRelativeTime";
 
-import type { CanvasMeta } from "../../data/canvasStore";
-
 import "./CanvasSidebar.scss";
+
+import type { CanvasMeta } from "../../data/canvasStore";
 
 type CanvasListProps = {
   canvases: readonly CanvasMeta[];
