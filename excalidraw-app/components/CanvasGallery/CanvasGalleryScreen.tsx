@@ -201,15 +201,13 @@ export const CanvasGalleryScreen = () => {
           </>
         }
         headerActions={
-          <button
-            type="button"
-            onClick={() => run(() => pickAndImportFiles(excalidrawAPI))}
-          >
-            {t("canvases.importFile")}
-          </button>
-        }
-        footer={
           <>
+            <button
+              type="button"
+              onClick={() => run(() => pickAndImportFiles(excalidrawAPI))}
+            >
+              {t("canvases.importFile")}
+            </button>
             <button type="button" onClick={exportAll}>
               {t("canvases.exportAll")}
             </button>

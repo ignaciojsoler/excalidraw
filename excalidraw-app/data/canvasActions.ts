@@ -86,7 +86,11 @@ const openCanvasInEditor = async (
   });
   api.updateScene({
     elements: restored,
-    appState: restoreAppState(appState, null),
+    appState: {
+      ...restoreAppState(appState, null),
+      // the theme is an app-wide preference, not part of a canvas
+      theme: api.getAppState().theme,
+    },
     captureUpdate: CaptureUpdateAction.NEVER,
   });
   api.history.clear();

@@ -155,4 +155,23 @@ describe("CanvasGallery", () => {
     expect(screen.getByText("sin espacio")).toBeTruthy();
     expect(screen.getByText("Export all")).toBeTruthy();
   });
+
+  it("closes the actions menu on outside click and on Escape", () => {
+    setup();
+    fireEvent.click(screen.getByLabelText("Actions for Viejo"));
+    expect(screen.getByText("Rename")).toBeTruthy();
+    fireEvent.pointerDown(screen.getByRole("dialog"));
+    expect(screen.queryByText("Rename")).toBeNull();
+
+    fireEvent.click(screen.getByLabelText("Actions for Viejo"));
+    fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
+    expect(screen.queryByText("Rename")).toBeNull();
+  });
+
+  it("keeps the menu open when clicking inside it", () => {
+    setup();
+    fireEvent.click(screen.getByLabelText("Actions for Viejo"));
+    fireEvent.pointerDown(screen.getByText("Rename"));
+    expect(screen.getByText("Rename")).toBeTruthy();
+  });
 });

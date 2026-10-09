@@ -422,7 +422,7 @@
     "untitled": "Untitled",
     "firstCanvas": "Canvas 1",
     "copyName": "{{name}} (copy)",
-    "back": "← Canvases",
+    "back": "All canvases",
     "actions": "Actions for {{name}}",
     "rename": "Rename",
     "duplicate": "Duplicate",

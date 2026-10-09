@@ -3,7 +3,7 @@ import { getNonDeletedElements } from "@excalidraw/element";
 
 import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
 
-/** small JPEG data URL of the current scene, or null if empty / on failure */
+/** small transparent PNG data URL of the current scene, or null if empty / on failure */
 export const generateThumbnail = async (
   api: ExcalidrawImperativeAPI,
 ): Promise<string | null> => {
@@ -16,11 +16,17 @@ export const generateThumbnail = async (
     }
     const canvas = await exportToCanvas({
       elements,
-      appState: { ...api.getAppState(), exportBackground: true },
+      // always light & transparent: the gallery applies the theme filter, so
+      // the same thumbnail works in light and dark mode
+      appState: {
+        ...api.getAppState(),
+        exportBackground: false,
+        exportWithDarkMode: false,
+      },
       files: api.getFiles(),
-      maxWidthOrHeight: 160,
+      maxWidthOrHeight: 360,
     });
-    return canvas.toDataURL("image/jpeg", 0.5);
+    return canvas.toDataURL("image/png");
   } catch (error) {
     console.warn("thumbnail generation failed", error);
     return null;

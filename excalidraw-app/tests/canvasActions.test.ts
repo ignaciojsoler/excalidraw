@@ -222,4 +222,18 @@ describe("canvasActions", () => {
     await showGallery(api);
     expect(appJotaiStore.get(galleryOpenAtom)).toBe(false);
   });
+
+  it("switchCanvas keeps the app theme instead of the one stored in the canvas", async () => {
+    await createCanvas({ activate: true });
+    const b = await createCanvas({
+      scene: { elements: [rect()], appState: { theme: "dark" } },
+    });
+    const { api } = makeApi();
+
+    await switchCanvas(api, b.id);
+
+    const update = (api.updateScene as any).mock.calls[0][0];
+    expect(update.appState.theme).toBe(api.getAppState().theme);
+    expect(update.appState.theme).toBe("light");
+  });
 });

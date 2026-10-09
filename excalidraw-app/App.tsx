@@ -599,7 +599,7 @@ const ExcalidrawWrapper = () => {
       ) {
         // don't sync if local state is newer or identical to browser state
         if (isBrowserStorageStateNewer(STORAGE_KEYS.VERSION_DATA_STATE)) {
-          // keep the sidebar list in sync with other tabs
+          // keep the gallery list in sync with other tabs
           refreshCanvasState();
           const username = importUsernameFromLocalStorage();
           setLangCode(getPreferredLanguage());
@@ -608,6 +608,11 @@ const ExcalidrawWrapper = () => {
             if (localDataState) {
               excalidrawAPI.updateScene({
                 ...localDataState,
+                // the theme is an app-wide preference, not part of a canvas
+                appState: {
+                  ...localDataState.appState,
+                  theme: excalidrawAPI.getAppState().theme,
+                },
                 captureUpdate: CaptureUpdateAction.NEVER,
               });
             }

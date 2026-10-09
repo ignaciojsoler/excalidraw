@@ -1,4 +1,3 @@
-import { getShortcutFromShortcutName } from "@excalidraw/excalidraw/actions/shortcuts";
 import {
   loginIcon,
   ExcalLogo,
@@ -15,8 +14,10 @@ import type { Theme } from "@excalidraw/element/types";
 
 import { LanguageList } from "../app-language/LanguageList";
 import { isExcalidrawPlusSignedUser } from "../app_constants";
+import { showGallery } from "../data/canvasActions";
 import { pickAndImportFiles } from "../data/canvasImport";
 
+import { galleryIcon } from "./CanvasGallery/BackToGalleryButton";
 import { saveDebugState } from "./DebugCanvas";
 
 export const AppMainMenu: React.FC<{
@@ -31,6 +32,13 @@ export const AppMainMenu: React.FC<{
   return (
     <MainMenu>
       <MainMenu.Item
+        icon={galleryIcon}
+        onSelect={() => api && showGallery(api)}
+        aria-label={t("canvases.back")}
+      >
+        {t("canvases.back")}
+      </MainMenu.Item>
+      <MainMenu.Item
         icon={LoadIcon}
         onSelect={() =>
           api &&
@@ -39,7 +47,6 @@ export const AppMainMenu: React.FC<{
           )
         }
         data-testid="load-button"
-        shortcut={getShortcutFromShortcutName("loadScene")}
         aria-label={t("canvases.openAsNew")}
       >
         {t("canvases.openAsNew")}

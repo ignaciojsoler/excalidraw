@@ -1,3 +1,33 @@
+// same look as the editor's own top-bar buttons (main menu, sidebar trigger)
+@mixin gallery-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  height: var(--lg-button-size, 2.25rem);
+  padding: 0 0.75rem;
+  border: none;
+  border-radius: var(--border-radius-lg, 0.5rem);
+  background: var(--color-surface-mid);
+  box-shadow: 0 0 0 1px var(--color-surface-lowest);
+  color: var(--text-primary-color);
+  font: inherit;
+  font-size: 0.875rem;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--color-surface-high);
+  }
+
+  .excalidraw.theme--dark & {
+    background: var(--color-surface-high);
+
+    &:hover {
+      background: #363541;
+    }
+  }
+}
+
 .excalidraw.canvas-gallery-portal {
   position: absolute;
   z-index: 10;
@@ -15,6 +45,11 @@
   overflow-y: auto;
   background: var(--color-surface-lowest, var(--island-bg-color));
   color: var(--text-primary-color);
+  font-family: var(--ui-font);
+
+  input {
+    font: inherit;
+  }
 
   &__header {
     display: flex;
@@ -61,7 +96,9 @@
     img {
       width: 100%;
       height: 100%;
-      object-fit: cover;
+      object-fit: contain;
+      box-sizing: border-box;
+      padding: 0.75rem;
     }
   }
 
@@ -90,23 +127,17 @@
 
   &__header button,
   &__footer button {
-    padding: 0.5rem 0.75rem;
-    border-radius: 0.5rem;
-    border: 1px solid var(--default-border-color);
-    background: var(--island-bg-color);
-    color: var(--text-primary-color);
-    cursor: pointer;
-  }
-
-  &__new {
-    font-weight: 600;
+    @include gallery-button;
   }
 
   &__search {
-    flex: 1 1 14rem;
-    min-width: 0;
-    padding: 0.4rem 0.6rem;
-    border-radius: 0.5rem;
+    flex: 0 1 20rem;
+    min-width: 10rem;
+    height: var(--lg-button-size, 2.25rem);
+    margin-left: auto;
+    padding: 0 0.75rem;
+    box-sizing: border-box;
+    border-radius: var(--border-radius-lg, 0.5rem);
     border: 1px solid var(--default-border-color);
     background: var(--input-bg-color);
     color: var(--text-primary-color);
@@ -139,6 +170,7 @@
     box-shadow: var(--shadow-island);
 
     button {
+      font: inherit;
       text-align: left;
       padding: 0.4rem 0.6rem;
       border: none;
@@ -173,22 +205,65 @@
 }
 
 .canvas-gallery-back {
+  // after the main menu: the hamburger keeps its corner
+  order: 1;
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.4rem 0.8rem;
-  border: 1px solid var(--default-border-color);
-  border-radius: 999px;
-  background: var(--island-bg-color);
-  color: var(--text-primary-color);
+  gap: 0.4rem;
+  height: var(--lg-button-size, 2.25rem);
+  max-width: 16rem;
+  padding: 0 0.6rem;
+  border: none;
+  border-radius: var(--border-radius-lg, 0.5rem);
+  background: transparent;
+  color: var(--color-on-surface, var(--text-primary-color));
+  font: inherit;
+  font-size: 0.875rem;
   cursor: pointer;
   pointer-events: all;
 
+  &:hover {
+    background: var(--color-surface-mid);
+  }
+
+  .excalidraw.theme--dark &:hover {
+    background: var(--color-surface-high);
+  }
+
+  &__icon {
+    display: flex;
+    width: 1rem;
+    height: 1rem;
+    flex: none;
+    opacity: 0.6;
+
+    svg {
+      width: 100%;
+      height: 100%;
+    }
+  }
+
   &__name {
-    max-width: 12rem;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    opacity: 0.7;
   }
+}
+
+// primary action, styled like the editor's "Share" button (also beats the
+// dark-theme rule of the gallery-button mixin)
+.canvas-gallery .canvas-gallery__header .canvas-gallery__new,
+.excalidraw.theme--dark .canvas-gallery__header .canvas-gallery__new {
+  font-weight: 600;
+  background: var(--color-primary);
+  color: var(--color-surface-lowest);
+
+  &:hover {
+    background: var(--color-primary-darker);
+  }
+}
+
+// thumbnails are rendered light; match the editor's dark-mode canvas filter
+.excalidraw.theme--dark .canvas-gallery__thumb img {
+  filter: var(--theme-filter);
 }

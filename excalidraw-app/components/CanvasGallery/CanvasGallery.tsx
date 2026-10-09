@@ -52,13 +52,32 @@ export const CanvasGallery = (props: CanvasGalleryProps) => {
   // leaving the default behavior (typing, pasting) inside the inputs intact
   const stop = (event: React.SyntheticEvent) => event.stopPropagation();
 
+  // like the editor's own menus: close on outside click or Escape
+  const closeMenuOnOutsidePointer = (event: React.PointerEvent) => {
+    const target = event.target as HTMLElement;
+    if (
+      menuId &&
+      !target.closest(".canvas-gallery__menu, .canvas-gallery__menu-button")
+    ) {
+      setMenuId(null);
+    }
+  };
+
+  const onKeyDown = (event: React.KeyboardEvent) => {
+    event.stopPropagation();
+    if (event.key === "Escape") {
+      setMenuId(null);
+    }
+  };
+
   return (
     <div
       className="canvas-gallery"
       role="dialog"
       aria-label={t("canvases.title")}
-      onKeyDown={stop}
+      onKeyDown={onKeyDown}
       onKeyUp={stop}
+      onPointerDown={closeMenuOnOutsidePointer}
       onPaste={stop}
     >
       <div className="canvas-gallery__header">
