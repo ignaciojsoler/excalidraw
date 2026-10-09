@@ -14,7 +14,8 @@ persistido automáticamente.
 ## Decisiones tomadas
 
 - **Almacenamiento:** IndexedDB en el navegador, sin backend.
-- **Interfaz:** sidebar con lista de canvas.
+- **Interfaz:** galería a pantalla completa que se muestra siempre al abrir la
+  app (ver "UI").
 - **Import:** todo lo que entra (archivo, drag & drop, links `#json`/`#url`) se
   guarda como canvas nuevo y no pisa el actual.
 - **Enfoque:** capa de storage multi-canvas dentro de `excalidraw-app`, sin tocar
@@ -75,18 +76,30 @@ vacío. Siempre con confirmación.
 
 ## UI
 
-La lista es un tab nuevo, "canvases", dentro del `DefaultSidebar` existente
-(botón en la barra superior, anclable en pantallas grandes). El "Abrir" estándar
-(Ctrl+O) se reemplaza por "Abrir como canvas nuevo".
+Al abrir la app se muestra siempre una galería a pantalla completa (overlay
+sobre el editor, que sigue montado pero `inert`). Solo se salta cuando la URL
+trae `#room=`, `#json=`, `#url=` o `?id=`: esos casos van directo al editor. No
+hay sidebar de canvas. El "Abrir" estándar (Ctrl+O) se reemplaza por "Abrir como
+canvas nuevo".
 
-- Arriba: botón "+ Nuevo canvas" y buscador por nombre.
-- Lista ordenada por `updatedAt` descendente. Cada ítem muestra miniatura,
-  nombre y "hace X tiempo". El activo va resaltado.
-- Abajo: "Exportar todos" e "Importar backup".
-- Menú "⋯" por ítem: renombrar (también doble click), duplicar, exportar este
-  canvas como `.excalidraw`, borrar.
-- Un canvas nuevo se llama "Sin título", "Sin título 2", etc.
-- Al abrir la app se carga el último canvas activo.
+- Cabecera: título, botón "+ Nuevo canvas", "Importar archivo" y buscador por
+  nombre. Si la búsqueda no encuentra nada, se muestra un mensaje.
+- Grilla de tarjetas ordenada por `updatedAt` descendente. Cada tarjeta muestra
+  miniatura grande, nombre y "hace X tiempo". El canvas activo va resaltado.
+- Abajo: "Exportar todos" e "Importar backup", y los avisos de almacenamiento.
+- Menú "⋯" por tarjeta: renombrar (también doble click), duplicar, exportar este
+  canvas como `.excalidraw`, borrar (con confirmación).
+- Elegir una tarjeta cierra la galería (también si es el canvas ya abierto, sin
+  recargar nada). Un canvas nuevo se llama "Sin título", "Sin título 2", etc.
+- En el editor, el botón "← Canvases" (`renderTopLeftUI`) guarda el canvas actual
+  con su miniatura y vuelve a la galería.
+- Mientras la galería está abierta ninguna tecla ni pegado llega al editor
+  oculto (la galería se renderiza en un portal en `document.body` y frena
+  `keydown`, `keyup` y `paste`).
+- Todos los textos pasan por `t("canvases.*")`, con claves en `en.json` y
+  `es-ES.json` (el resto de idiomas cae a inglés). Es la única excepción a "no
+  tocar `packages/excalidraw`". Los nombres por defecto quedan guardados en el
+  idioma activo al crearlos.
 
 ### Cambio de canvas
 
@@ -118,8 +131,8 @@ tocarlo.
 - **Cuota llena:** aviso claro sin perder el canvas abierto; sugiere exportar
   backup y borrar canvas viejos. Se reutiliza el patrón de
   `localStorageQuotaExceededAtom`.
-- **Falla de guardado:** un reintento; si persiste, indicador "no guardado" en el
-  sidebar y los cambios se mantienen en memoria.
+- **Falla de guardado:** un reintento; si persiste, indicador "no guardado" en la
+  galería y los cambios se mantienen en memoria.
 - **Canvas corrupto o ilegible:** se queda en el canvas actual, muestra error y
   ofrece exportar el dato crudo en lugar de borrarlo.
 - **Backup inválido:** rechazo completo antes de escribir.
@@ -135,8 +148,8 @@ tocarlo.
 - Backup: export/import ida y vuelta sin pérdida; rechazo de archivos inválidos.
 - Cambio de canvas: guarda el actual antes de cargar el otro; resetea historial.
 - Import por archivo o link: crea canvas nuevo sin pisar el actual.
-- UI del sidebar: lista, resaltado del activo, menú de acciones, confirmación al
-  borrar.
+- UI de la galería: lista, resaltado del activo, menú de acciones, confirmación
+  al borrar, teclas y pegado aislados del editor, traducciones completas.
 - Verificación final: `yarn test:typecheck` y `yarn test:update`.
 
 ## Orden de implementación
@@ -144,7 +157,7 @@ tocarlo.
 1. `canvasStore` (IndexedDB) con tests, sin UI.
 2. Migración desde localStorage.
 3. Adaptar `LocalData` para guardar/cargar sobre el canvas activo.
-4. Sidebar básico: lista, nuevo, cambiar de canvas.
+4. Lista básica (hoy galería): nuevo, cambiar de canvas.
 5. Acciones por canvas: renombrar, duplicar, borrar, exportar uno.
 6. Flujo de import (archivo, drag & drop, links) como canvas nuevo.
 7. Backup: exportar todos e importar backup.
