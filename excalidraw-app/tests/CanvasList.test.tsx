@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
+import { EditorJotaiProvider } from "@excalidraw/excalidraw/editor-jotai";
 
 import { CanvasList } from "../components/CanvasSidebar/CanvasList";
 import { formatRelativeTime } from "../components/CanvasSidebar/formatRelativeTime";
@@ -23,23 +24,25 @@ const setup = (
     onExport: vi.fn(),
   };
   render(
-    <CanvasList
-      canvases={canvases}
-      currentId="c"
-      thumbnails={new Map()}
-      {...handlers}
-      {...overrides}
-    />,
+    <EditorJotaiProvider>
+      <CanvasList
+        canvases={canvases}
+        currentId="c"
+        thumbnails={new Map()}
+        {...handlers}
+        {...overrides}
+      />
+    </EditorJotaiProvider>,
   );
   return handlers;
 };
 
 describe("formatRelativeTime", () => {
   it("formats in Spanish", () => {
-    expect(formatRelativeTime(NOW - 10_000, NOW)).toBe("hace un momento");
-    expect(formatRelativeTime(NOW - 5 * 60_000, NOW)).toBe("hace 5 min");
-    expect(formatRelativeTime(NOW - 3 * 3600_000, NOW)).toBe("hace 3 h");
-    expect(formatRelativeTime(NOW - 2 * 86400_000, NOW)).toBe("hace 2 d");
+    expect(formatRelativeTime(NOW - 10_000, NOW)).toBe("just now");
+    expect(formatRelativeTime(NOW - 5 * 60_000, NOW)).toBe("5 min ago");
+    expect(formatRelativeTime(NOW - 3 * 3600_000, NOW)).toBe("3 h ago");
+    expect(formatRelativeTime(NOW - 2 * 86400_000, NOW)).toBe("2 d ago");
   });
 });
 
@@ -63,7 +66,7 @@ describe("CanvasList", () => {
 
   it("filters by name", () => {
     setup();
-    fireEvent.change(screen.getByPlaceholderText("Buscar canvas"), {
+    fireEvent.change(screen.getByPlaceholderText("Search canvases"), {
       target: { value: "vie" },
     });
     expect(screen.getAllByRole("listitem")).toHaveLength(1);
@@ -74,14 +77,14 @@ describe("CanvasList", () => {
     const h = setup();
     fireEvent.click(screen.getByText("Viejo"));
     expect(h.onSelect).toHaveBeenCalledWith("a");
-    fireEvent.click(screen.getByText("+ Nuevo canvas"));
+    fireEvent.click(screen.getByText("+ New canvas"));
     expect(h.onCreate).toHaveBeenCalled();
   });
 
   it("renames from the menu, trimming the name", () => {
     const h = setup();
-    fireEvent.click(screen.getByLabelText("Acciones de Viejo"));
-    fireEvent.click(screen.getByText("Renombrar"));
+    fireEvent.click(screen.getByLabelText("Actions for Viejo"));
+    fireEvent.click(screen.getByText("Rename"));
     const input = screen.getByDisplayValue("Viejo");
     fireEvent.change(input, { target: { value: "  Nuevo nombre  " } });
     fireEvent.keyDown(input, { key: "Enter" });
@@ -100,25 +103,25 @@ describe("CanvasList", () => {
 
   it("duplicates, exports and deletes from the menu", () => {
     const h = setup();
-    fireEvent.click(screen.getByLabelText("Acciones de Viejo"));
-    fireEvent.click(screen.getByText("Duplicar"));
+    fireEvent.click(screen.getByLabelText("Actions for Viejo"));
+    fireEvent.click(screen.getByText("Duplicate"));
     expect(h.onDuplicate).toHaveBeenCalledWith("a");
 
-    fireEvent.click(screen.getByLabelText("Acciones de Viejo"));
-    fireEvent.click(screen.getByText("Exportar este canvas"));
+    fireEvent.click(screen.getByLabelText("Actions for Viejo"));
+    fireEvent.click(screen.getByText("Export this canvas"));
     expect(h.onExport).toHaveBeenCalledWith("a");
 
-    fireEvent.click(screen.getByLabelText("Acciones de Viejo"));
-    fireEvent.click(screen.getByText("Borrar"));
+    fireEvent.click(screen.getByLabelText("Actions for Viejo"));
+    fireEvent.click(screen.getByText("Delete"));
     expect(h.onDelete).toHaveBeenCalledWith("a");
   });
 
   it("renders banners and footer slots", () => {
     setup({
       banners: <div>sin espacio</div>,
-      footer: <button type="button">Exportar todos</button>,
+      footer: <button type="button">Export all</button>,
     });
     expect(screen.getByText("sin espacio")).toBeTruthy();
-    expect(screen.getByText("Exportar todos")).toBeTruthy();
+    expect(screen.getByText("Export all")).toBeTruthy();
   });
 });

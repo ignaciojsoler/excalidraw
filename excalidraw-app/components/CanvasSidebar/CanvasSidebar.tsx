@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useExcalidrawAPI } from "@excalidraw/excalidraw";
+import { useI18n } from "@excalidraw/excalidraw/i18n";
 import { openConfirmModal } from "@excalidraw/excalidraw/components/OverwriteConfirm/OverwriteConfirmState";
 import { serializeAsJSON } from "@excalidraw/excalidraw/data/json";
 
@@ -37,6 +38,7 @@ import { CanvasList } from "./CanvasList";
 
 export const CanvasSidebar = () => {
   const excalidrawAPI = useExcalidrawAPI();
+  const { t } = useI18n();
   const index = useAtomValue(canvasIndexAtom);
   const currentId = useAtomValue(currentCanvasIdAtom);
   const storageUnavailable = useAtomValue(canvasStorageUnavailableAtom);
@@ -70,7 +72,7 @@ export const CanvasSidebar = () => {
       await action();
     } catch (error: any) {
       excalidrawAPI.setToast({
-        message: error?.message || "No se pudo completar la acción",
+        message: error?.message || t("canvases.errors.actionFailed"),
         closable: true,
       });
     }
@@ -83,7 +85,7 @@ export const CanvasSidebar = () => {
       }
       const scene = await loadScene(id);
       if (!scene) {
-        throw new Error("El canvas ya no existe");
+        throw new Error(t("canvases.errors.notFound"));
       }
       const files = Object.fromEntries(
         (await listCanvasFiles(id)).map((file) => [file.id, file]),
@@ -139,11 +141,9 @@ export const CanvasSidebar = () => {
     run(async () => {
       const name = index.canvases.find((c) => c.id === id)?.name ?? "";
       const confirmed = await openConfirmModal({
-        title: "Borrar canvas",
-        description: (
-          <>{`Se va a borrar "${name}" y sus imágenes. No se puede deshacer.`}</>
-        ),
-        actionLabel: "Borrar",
+        title: t("canvases.deleteTitle"),
+        description: <>{t("canvases.deleteDescription", { name })}</>,
+        actionLabel: t("canvases.delete"),
         color: "danger",
       });
       if (confirmed) {
@@ -166,18 +166,17 @@ export const CanvasSidebar = () => {
         <>
           {storageUnavailable && (
             <div className="canvas-sidebar__banner">
-              El almacenamiento del navegador no está disponible: solo se puede
-              usar un canvas y no se guardará.
+              {t("canvases.banner.storageUnavailable")}
             </div>
           )}
           {quotaExceeded && (
             <div className="canvas-sidebar__banner">
-              Sin espacio. Exportá un backup y borrá canvas viejos.
+              {t("canvases.banner.quota")}
             </div>
           )}
           {saveError && !quotaExceeded && (
             <div className="canvas-sidebar__banner">
-              No guardado: los últimos cambios siguen solo en memoria.
+              {t("canvases.banner.saveError")}
             </div>
           )}
         </>
@@ -188,13 +187,13 @@ export const CanvasSidebar = () => {
             type="button"
             onClick={() => run(() => pickAndImportFiles(excalidrawAPI))}
           >
-            Importar archivo
+            {t("canvases.importFile")}
           </button>
           <button type="button" onClick={exportAll}>
-            Exportar todos
+            {t("canvases.exportAll")}
           </button>
           <button type="button" onClick={importBackupFile}>
-            Importar backup
+            {t("canvases.importBackup")}
           </button>
         </>
       }

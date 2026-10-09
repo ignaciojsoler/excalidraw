@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useI18n } from "@excalidraw/excalidraw/i18n";
 
 import { formatRelativeTime } from "./formatRelativeTime";
 
@@ -21,6 +22,7 @@ type CanvasListProps = {
 };
 
 export const CanvasList = (props: CanvasListProps) => {
+  const { t } = useI18n();
   const [query, setQuery] = useState("");
   const [menuId, setMenuId] = useState<string | null>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
@@ -51,12 +53,12 @@ export const CanvasList = (props: CanvasListProps) => {
         className="canvas-sidebar__new"
         onClick={props.onCreate}
       >
-        + Nuevo canvas
+        {t("canvases.new")}
       </button>
       <input
         className="canvas-sidebar__search"
         type="search"
-        placeholder="Buscar canvas"
+        placeholder={t("canvases.search")}
         value={query}
         onChange={(event) => setQuery(event.target.value)}
       />
@@ -111,7 +113,7 @@ export const CanvasList = (props: CanvasListProps) => {
               <button
                 type="button"
                 className="canvas-sidebar__menu-button"
-                aria-label={`Acciones de ${canvas.name}`}
+                aria-label={t("canvases.actions", { name: canvas.name })}
                 onClick={() =>
                   setMenuId(menuId === canvas.id ? null : canvas.id)
                 }
@@ -121,7 +123,7 @@ export const CanvasList = (props: CanvasListProps) => {
               {menuId === canvas.id && (
                 <div className="canvas-sidebar__menu" role="menu">
                   <button type="button" onClick={() => startRename(canvas)}>
-                    Renombrar
+                    {t("canvases.rename")}
                   </button>
                   <button
                     type="button"
@@ -130,7 +132,7 @@ export const CanvasList = (props: CanvasListProps) => {
                       props.onDuplicate(canvas.id);
                     }}
                   >
-                    Duplicar
+                    {t("canvases.duplicate")}
                   </button>
                   <button
                     type="button"
@@ -139,7 +141,7 @@ export const CanvasList = (props: CanvasListProps) => {
                       props.onExport(canvas.id);
                     }}
                   >
-                    Exportar este canvas
+                    {t("canvases.exportOne")}
                   </button>
                   <button
                     type="button"
@@ -149,7 +151,7 @@ export const CanvasList = (props: CanvasListProps) => {
                       props.onDelete(canvas.id);
                     }}
                   >
-                    Borrar
+                    {t("canvases.delete")}
                   </button>
                 </div>
               )}

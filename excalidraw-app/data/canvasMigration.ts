@@ -1,4 +1,5 @@
 import { isInitializedImageElement } from "@excalidraw/element";
+import { t } from "@excalidraw/excalidraw/i18n";
 import { clear, createStore, getMany } from "idb-keyval";
 
 import type { ExcalidrawElement, FileId } from "@excalidraw/element/types";
@@ -63,7 +64,7 @@ export const migrateFromLocalStorage = async () => {
   ).filter((file): file is BinaryFileData => !!file);
 
   const meta = await createCanvas({
-    name: "Canvas 1",
+    name: t("canvases.firstCanvas"),
     scene: toStoredScene(legacy.elements, legacy.appState),
     files: legacyFiles,
     activate: true,
@@ -84,7 +85,7 @@ export const migrateFromLocalStorage = async () => {
     storedFiles.length !== legacyFiles.length
   ) {
     await deleteCanvas(meta.id);
-    throw new Error("canvas migration: verification failed");
+    throw new Error(t("canvases.errors.migrationFailed"));
   }
 
   localStorage.removeItem(STORAGE_KEYS.LOCAL_STORAGE_ELEMENTS);

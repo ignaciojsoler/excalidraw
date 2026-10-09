@@ -119,7 +119,7 @@ describe("canvasActions", () => {
     expect(LocalData.isSavePaused()).toBe(false);
   });
 
-  it("createNewCanvas opens a new empty canvas named Sin título 2", async () => {
+  it("createNewCanvas opens a new empty canvas named Untitled 2", async () => {
     const a = await createCanvas({ activate: true });
     const { api, getElements } = makeApi([rect()]);
 
@@ -127,8 +127,8 @@ describe("canvasActions", () => {
 
     const index = await getIndex();
     expect(index.canvases.map((c) => c.name)).toEqual([
-      "Sin título",
-      "Sin título 2",
+      "Untitled",
+      "Untitled 2",
     ]);
     expect(getActiveCanvasId()).not.toBe(a.id);
     expect(getElements()).toHaveLength(0);
@@ -144,7 +144,7 @@ describe("canvasActions", () => {
     const index = await getIndex();
     expect(index.canvases).toHaveLength(2);
     const copy = index.canvases.find((c) => c.id !== a.id)!;
-    expect(copy.name).toBe("Sin título (copia)");
+    expect(copy.name).toBe("Untitled (copy)");
     expect((await loadScene(copy.id))?.elements).toHaveLength(2);
     expect(getActiveCanvasId()).toBe(a.id);
   });

@@ -1,3 +1,5 @@
+import { t } from "@excalidraw/excalidraw/i18n";
+
 import type { BinaryFileData } from "@excalidraw/excalidraw/types";
 
 import {
@@ -50,8 +52,8 @@ export const buildBackup = async (): Promise<CanvasBackup> => {
   };
 };
 
-const invalid = (reason: string) =>
-  new Error(`El archivo de backup no es válido: ${reason}`);
+const invalid = (reasonKey: Parameters<typeof t>[0]) =>
+  new Error(t("canvases.errors.backupInvalid", { reason: t(reasonKey) }));
 
 const isObject = (value: unknown): value is Record<string, any> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -61,16 +63,16 @@ export const parseBackup = (text: string): CanvasBackup => {
   try {
     data = JSON.parse(text);
   } catch {
-    throw invalid("no es JSON");
+    throw invalid("canvases.errors.backupNotJson");
   }
   if (!isObject(data) || data.type !== BACKUP_TYPE) {
-    throw invalid("no es un backup de canvas");
+    throw invalid("canvases.errors.backupNotBackup");
   }
   if (typeof data.version !== "number" || data.version > BACKUP_VERSION) {
-    throw invalid("versión no soportada");
+    throw invalid("canvases.errors.backupVersion");
   }
   if (!Array.isArray(data.canvases)) {
-    throw invalid("falta la lista de canvas");
+    throw invalid("canvases.errors.backupNoList");
   }
   for (const canvas of data.canvases) {
     if (
@@ -81,7 +83,7 @@ export const parseBackup = (text: string): CanvasBackup => {
       !isObject(canvas.scene.appState) ||
       !Array.isArray(canvas.files)
     ) {
-      throw invalid("un canvas está incompleto");
+      throw invalid("canvases.errors.backupCanvasIncomplete");
     }
     for (const file of canvas.files) {
       if (
@@ -90,7 +92,7 @@ export const parseBackup = (text: string): CanvasBackup => {
         typeof file.mimeType !== "string" ||
         typeof file.dataURL !== "string"
       ) {
-        throw invalid("una imagen está incompleta");
+        throw invalid("canvases.errors.backupImageIncomplete");
       }
     }
   }

@@ -130,6 +130,6 @@ describe("canvasMigration", () => {
   it("bootstrapCanvases creates an empty canvas on a fresh install", async () => {
     const index = await bootstrapCanvases();
     expect(index?.canvases).toHaveLength(1);
-    expect(index?.canvases[0].name).toBe("Sin título");
+    expect(index?.canvases[0].name).toBe("Untitled");
   });
 });

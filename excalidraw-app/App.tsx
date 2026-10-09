@@ -701,7 +701,7 @@ const ExcalidrawWrapper = () => {
           await importFileAsCanvas(excalidrawAPI, file);
         } catch (error: any) {
           excalidrawAPI.setToast({
-            message: error?.message || "No se pudo importar el archivo",
+            message: error?.message || t("canvases.errors.importFailed"),
             closable: true,
           });
         }
@@ -979,7 +979,7 @@ const ExcalidrawWrapper = () => {
         onPointerUpdate={collabAPI?.onPointerUpdate}
         UIOptions={{
           canvasActions: {
-            // opening a file always creates a new canvas (see "Abrir como canvas nuevo")
+            // opening a file always creates a new canvas (see the "open as new canvas" menu item)
             loadScene: false,
             toggleTheme: true,
             export: {

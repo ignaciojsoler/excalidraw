@@ -41,15 +41,13 @@ describe("canvasStore", () => {
     await resetCanvasStoreForTests();
   });
 
-  it("names new canvases Sin título, Sin título 2, ...", async () => {
-    expect(getNextUntitledName([])).toBe("Sin título");
-    expect(getNextUntitledName(["Sin título"])).toBe("Sin título 2");
-    expect(getNextUntitledName(["Sin título", "Sin título 2"])).toBe(
-      "Sin título 3",
-    );
+  it("names new canvases Untitled, Untitled 2, ...", async () => {
+    expect(getNextUntitledName([])).toBe("Untitled");
+    expect(getNextUntitledName(["Untitled"])).toBe("Untitled 2");
+    expect(getNextUntitledName(["Untitled", "Untitled 2"])).toBe("Untitled 3");
     const a = await createCanvas();
     const b = await createCanvas();
-    expect([a.name, b.name]).toEqual(["Sin título", "Sin título 2"]);
+    expect([a.name, b.name]).toEqual(["Untitled", "Untitled 2"]);
   });
 
   it("initCanvasStore creates one empty active canvas when there are none", async () => {
@@ -108,7 +106,7 @@ describe("canvasStore", () => {
     });
     const b = await duplicateCanvas(a.id);
     expect(b.id).not.toBe(a.id);
-    expect(b.name).toBe("Original (copia)");
+    expect(b.name).toBe("Original (copy)");
     expect((await loadScene(b.id))?.elements).toHaveLength(3);
     expect(await listCanvasFiles(b.id)).toHaveLength(1);
     expect((await getThumbnails([b.id])).get(b.id)).toBe("data:thumb");

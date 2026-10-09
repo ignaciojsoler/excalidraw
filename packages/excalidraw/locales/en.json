@@ -414,6 +414,52 @@
     "canvasTooBig": "The canvas may be too big.",
     "canvasTooBigTip": "Tip: try moving the farthest elements a bit closer together."
   },
+  "canvases": {
+    "title": "My canvases",
+    "new": "+ New canvas",
+    "search": "Search canvases",
+    "empty": "No canvases match your search",
+    "untitled": "Untitled",
+    "firstCanvas": "Canvas 1",
+    "copyName": "{{name}} (copy)",
+    "back": "← Canvases",
+    "actions": "Actions for {{name}}",
+    "rename": "Rename",
+    "duplicate": "Duplicate",
+    "exportOne": "Export this canvas",
+    "delete": "Delete",
+    "deleteTitle": "Delete canvas",
+    "deleteDescription": "\"{{name}}\" and its images will be deleted. This can't be undone.",
+    "importFile": "Import file",
+    "exportAll": "Export all",
+    "importBackup": "Import backup",
+    "openAsNew": "Open as new canvas",
+    "time": {
+      "now": "just now",
+      "minutes": "{{count}} min ago",
+      "hours": "{{count}} h ago",
+      "days": "{{count}} d ago"
+    },
+    "banner": {
+      "storageUnavailable": "Browser storage is not available: only one canvas can be used and it won't be saved.",
+      "quota": "Out of space. Export a backup and delete old canvases.",
+      "saveError": "Not saved: your latest changes only live in memory."
+    },
+    "errors": {
+      "actionFailed": "Couldn't complete the action",
+      "importFailed": "Couldn't import the file",
+      "notFound": "The canvas no longer exists",
+      "openFailed": "Couldn't open the canvas: it no longer exists",
+      "migrationFailed": "Canvas migration failed verification",
+      "backupInvalid": "Invalid backup file: {{reason}}",
+      "backupNotJson": "it is not JSON",
+      "backupNotBackup": "it is not a canvas backup",
+      "backupVersion": "unsupported version",
+      "backupNoList": "the canvas list is missing",
+      "backupCanvasIncomplete": "a canvas is incomplete",
+      "backupImageIncomplete": "an image is incomplete"
+    }
+  },
   "errorSplash": {
     "headingMain": "Encountered an error. Try <button>reloading the page</button>.",
     "clearCanvasMessage": "If reloading doesn't work, try <button>clearing the canvas</button>.",

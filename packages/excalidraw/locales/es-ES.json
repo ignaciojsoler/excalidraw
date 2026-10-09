@@ -403,6 +403,52 @@
     "canvasTooBig": "El lienzo podría ser demasiado grande.",
     "canvasTooBigTip": "Sugerencia: intenta acercar un poco más los elementos más lejanos."
   },
+  "canvases": {
+    "title": "Mis canvas",
+    "new": "+ Nuevo canvas",
+    "search": "Buscar canvas",
+    "empty": "Ningún canvas coincide con la búsqueda",
+    "untitled": "Sin título",
+    "firstCanvas": "Canvas 1",
+    "copyName": "{{name}} (copia)",
+    "back": "← Canvas",
+    "actions": "Acciones de {{name}}",
+    "rename": "Renombrar",
+    "duplicate": "Duplicar",
+    "exportOne": "Exportar este canvas",
+    "delete": "Borrar",
+    "deleteTitle": "Borrar canvas",
+    "deleteDescription": "Se va a borrar \"{{name}}\" y sus imágenes. No se puede deshacer.",
+    "importFile": "Importar archivo",
+    "exportAll": "Exportar todos",
+    "importBackup": "Importar backup",
+    "openAsNew": "Abrir como canvas nuevo",
+    "time": {
+      "now": "hace un momento",
+      "minutes": "hace {{count}} min",
+      "hours": "hace {{count}} h",
+      "days": "hace {{count}} d"
+    },
+    "banner": {
+      "storageUnavailable": "El almacenamiento del navegador no está disponible: solo se puede usar un canvas y no se guardará.",
+      "quota": "Sin espacio. Exportá un backup y borrá canvas viejos.",
+      "saveError": "No guardado: los últimos cambios siguen solo en memoria."
+    },
+    "errors": {
+      "actionFailed": "No se pudo completar la acción",
+      "importFailed": "No se pudo importar el archivo",
+      "notFound": "El canvas ya no existe",
+      "openFailed": "No se pudo abrir el canvas: ya no existe",
+      "migrationFailed": "La migración de canvas falló la verificación",
+      "backupInvalid": "El archivo de backup no es válido: {{reason}}",
+      "backupNotJson": "no es JSON",
+      "backupNotBackup": "no es un backup de canvas",
+      "backupVersion": "versión no soportada",
+      "backupNoList": "falta la lista de canvas",
+      "backupCanvasIncomplete": "un canvas está incompleto",
+      "backupImageIncomplete": "una imagen está incompleta"
+    }
+  },
   "errorSplash": {
     "headingMain": "Se encontró un error. Intente <button>recargando la página.</button>",
     "clearCanvasMessage": "Si la recarga no funciona, intente <button>limpiando el lienzo</button>.",

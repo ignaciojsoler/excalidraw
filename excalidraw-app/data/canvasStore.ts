@@ -21,6 +21,7 @@ import {
   randomId,
 } from "@excalidraw/common";
 import { getNonDeletedElements } from "@excalidraw/element";
+import { t } from "@excalidraw/excalidraw/i18n";
 import {
   clear,
   createStore,
@@ -53,8 +54,6 @@ export type CanvasScene = {
   appState: Partial<AppState>;
 };
 
-export const DEFAULT_CANVAS_NAME = "Sin título";
-
 const store = createStore("canvases-db", "canvases-store");
 
 const INDEX_KEY = "index";
@@ -84,14 +83,15 @@ const readIndex = async (): Promise<CanvasIndex> =>
 export const getIndex = () => readIndex();
 
 export const getNextUntitledName = (names: readonly string[]) => {
-  if (!names.includes(DEFAULT_CANVAS_NAME)) {
-    return DEFAULT_CANVAS_NAME;
+  const base = t("canvases.untitled");
+  if (!names.includes(base)) {
+    return base;
   }
   let n = 2;
-  while (names.includes(`${DEFAULT_CANVAS_NAME} ${n}`)) {
+  while (names.includes(`${base} ${n}`)) {
     n++;
   }
-  return `${DEFAULT_CANVAS_NAME} ${n}`;
+  return `${base} ${n}`;
 };
 
 type CreateCanvasOptions = {
@@ -214,7 +214,7 @@ export const setActiveCanvas = (id: string) =>
   serialize(async () => {
     const index = await readIndex();
     if (!index.canvases.some((c) => c.id === id)) {
-      throw new Error(`Canvas ${id} no existe`);
+      throw new Error(t("canvases.errors.notFound"));
     }
     index.activeCanvasId = id;
     await set(INDEX_KEY, index, store);
@@ -245,12 +245,12 @@ export const duplicateCanvas = (id: string) =>
     const source = index.canvases.find((c) => c.id === id);
     const scene = await loadScene(id);
     if (!source || !scene) {
-      throw new Error(`Canvas ${id} no existe`);
+      throw new Error(t("canvases.errors.notFound"));
     }
     const files = await listCanvasFiles(id);
     const thumbnail = (await getThumbnails([id])).get(id) ?? null;
     return _createCanvas(index, {
-      name: `${source.name} (copia)`,
+      name: t("canvases.copyName", { name: source.name }),
       scene,
       files,
       thumbnail,

@@ -4,6 +4,7 @@ import {
   restoreElements,
 } from "@excalidraw/excalidraw/data/restore";
 import { isInitializedImageElement } from "@excalidraw/element";
+import { t } from "@excalidraw/excalidraw/i18n";
 
 import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
 
@@ -69,7 +70,7 @@ const openCanvasInEditor = async (
 ) => {
   const stored = await loadScene(canvasId);
   if (!stored) {
-    throw new Error("No se pudo abrir el canvas: ya no existe");
+    throw new Error(t("canvases.errors.openFailed"));
   }
   const { elements, appState } = fromStoredScene(stored);
 

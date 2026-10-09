@@ -40,9 +40,9 @@ export const AppMainMenu: React.FC<{
         }
         data-testid="load-button"
         shortcut={getShortcutFromShortcutName("loadScene")}
-        aria-label="Abrir como canvas nuevo"
+        aria-label={t("canvases.openAsNew")}
       >
-        Abrir como canvas nuevo
+        {t("canvases.openAsNew")}
       </MainMenu.Item>
       <MainMenu.DefaultItems.SaveToActiveFile />
       <MainMenu.DefaultItems.Export />
