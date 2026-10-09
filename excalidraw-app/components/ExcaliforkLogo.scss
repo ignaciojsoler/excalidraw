@@ -1,0 +1,19 @@
+// mirrors the "normal" size of the editor's ExcalidrawLogo
+.excalidraw .ExcaliforkLogo {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+
+  .ExcaliforkLogo-icon {
+    height: 3rem;
+    width: 3rem;
+    flex: none;
+    color: var(--color-logo-icon);
+  }
+
+  .ExcaliforkLogo-text {
+    font-size: 2.2rem;
+    line-height: 1;
+    color: var(--color-logo-text);
+  }
+}

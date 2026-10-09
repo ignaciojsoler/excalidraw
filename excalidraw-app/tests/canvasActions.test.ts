@@ -15,6 +15,7 @@ import {
   setCanvasEditorReady,
   showGallery,
   switchCanvas,
+  whenCanvasEditorReady,
 } from "../data/canvasActions";
 import {
   createCanvas,
@@ -235,5 +236,20 @@ describe("canvasActions", () => {
     const update = (api.updateScene as any).mock.calls[0][0];
     expect(update.appState.theme).toBe(api.getAppState().theme);
     expect(update.appState.theme).toBe("light");
+  });
+
+  it("whenCanvasEditorReady resolves once the editor becomes ready", async () => {
+    setCanvasEditorReady(false);
+    let resolved = false;
+    whenCanvasEditorReady().then(() => {
+      resolved = true;
+    });
+    await Promise.resolve();
+    expect(resolved).toBe(false);
+
+    setCanvasEditorReady(true);
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(resolved).toBe(true);
   });
 });

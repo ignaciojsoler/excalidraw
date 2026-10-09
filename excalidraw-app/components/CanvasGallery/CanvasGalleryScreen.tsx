@@ -27,6 +27,7 @@ import {
   renameCanvasAction,
   saveCurrentCanvasNow,
   switchCanvas,
+  whenCanvasEditorReady,
 } from "../../data/canvasActions";
 import {
   getThumbnails,
@@ -85,6 +86,8 @@ export const CanvasGalleryScreen = () => {
 
   const run = async (action: () => Promise<void>) => {
     try {
+      // clicks right after startup wait for the editor instead of being lost
+      await whenCanvasEditorReady();
       await action();
     } catch (error: any) {
       excalidrawAPI.setToast({

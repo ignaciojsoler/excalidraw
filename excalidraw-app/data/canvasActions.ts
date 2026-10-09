@@ -31,11 +31,28 @@ import { LocalData } from "./LocalData";
 import { updateBrowserStateVersion } from "./tabSync";
 
 let editorReady = false;
+let resolveEditorReady: () => void = () => {};
+let editorReadyPromise = new Promise<void>((resolve) => {
+  resolveEditorReady = resolve;
+});
 
 /** App calls this once the initial scene is in the editor */
 export const setCanvasEditorReady = (ready: boolean) => {
   editorReady = ready;
+  if (ready) {
+    resolveEditorReady();
+  } else {
+    editorReadyPromise = new Promise<void>((resolve) => {
+      resolveEditorReady = resolve;
+    });
+  }
 };
+
+/**
+ * The gallery is visible before the editor finished loading: UI handlers
+ * await this so an early click is carried out instead of silently dropped.
+ */
+export const whenCanvasEditorReady = () => editorReadyPromise;
 
 /**
  * Persists the editor's current content into the canvas open in this tab,
