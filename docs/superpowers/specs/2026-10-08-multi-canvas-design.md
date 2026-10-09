@@ -37,14 +37,17 @@ imágenes. Por eso la escena pasa a IndexedDB.
 
 ## Modelo de datos
 
-Base IndexedDB `canvases` con tres stores:
+Una sola base IndexedDB `canvases-db` con prefijos de clave:
 
-- `index`: lista de `{ id, name, createdAt, updatedAt, thumbnail }` y el
-  `activeCanvasId`.
-- `scenes`: `id → { elements, appState }`. El appState se limpia igual que hoy
+- `index`: `{ canvases: [{ id, name, createdAt, updatedAt }], activeCanvasId }`.
+  `activeCanvasId` es solo el último canvas abierto (se usa al arrancar); cada
+  pestaña mantiene su canvas activo en memoria.
+- `scene:<id>`: `{ elements, appState }`. El appState se limpia igual que hoy
   (`clearAppStateForLocalStorage`).
-- `files`: archivos de imagen con clave `canvasId:fileId`, para aislar cada canvas
-  y poder borrarlos junto con él.
+- `thumb:<id>`: miniatura (data URL). Vive aparte para no reescribir el índice
+  completo en cada autosave.
+- `file:<id>:<fileId>`: archivos de imagen, aislados por canvas para poder
+  borrarlos junto con él.
 
 La library no se mueve.
 
@@ -72,8 +75,9 @@ vacío. Siempre con confirmación.
 
 ## UI
 
-Se usa el componente `Sidebar` de la librería, con botón en la barra superior y
-posibilidad de anclarlo (docked) en pantallas grandes.
+La lista es un tab nuevo, "canvases", dentro del `DefaultSidebar` existente
+(botón en la barra superior, anclable en pantallas grandes). El "Abrir" estándar
+(Ctrl+O) se reemplaza por "Abrir como canvas nuevo".
 
 - Arriba: botón "+ Nuevo canvas" y buscador por nombre.
 - Lista ordenada por `updatedAt` descendente. Cada ítem muestra miniatura,
@@ -103,7 +107,9 @@ posibilidad de anclarlo (docked) en pantallas grandes.
 ### Varias pestañas
 
 El índice se refresca entre pestañas con `tabSync`. Si el mismo canvas se edita
-en dos pestañas, gana el último guardado (sin merge).
+en dos pestañas, gana el último guardado (sin merge). Si el canvas abierto en una
+pestaña se borra desde otra, esa pestaña conserva el contenido del editor sin
+tocarlo.
 
 ## Manejo de errores
 
