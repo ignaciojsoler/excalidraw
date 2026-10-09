@@ -7,7 +7,7 @@ Cada task termina con `yarn test:typecheck`, `yarn fix`, sus tests y un commit.
 
 - [x] **Task 1**: `canvasStore` (IndexedDB): crear, renombrar, duplicar, borrar, escenas, miniaturas, files por canvas, índice serializado
 - [x] **Task 2**: migración desde localStorage a "Canvas 1" y `bootstrapCanvases()`
-- [ ] **Task 3**: backup (formato, validación, exportar/importar)
+- [x] **Task 3**: backup (formato, validación, exportar/importar)
 - [ ] **Task 4**: `LocalData` y `App.tsx` guardan/cargan sobre el canvas activo (files aislados, `clearObsoleteFiles` acotado)
 - [ ] **Task 5**: acciones de canvas (cambiar, crear, duplicar, borrar, renombrar) con guardado previo y reset de historial
 - [ ] **Task 6**: sidebar de canvas (tab en el sidebar por defecto), lista, buscador, menú ⋯
