@@ -412,6 +412,8 @@
     "firstCanvas": "Canvas 1",
     "copyName": "{{name}} (copia)",
     "back": "Todos los canvas",
+    "breadcrumbHome": "Canvas",
+    "renameCurrent": "Renombrar canvas",
     "actions": "Acciones de {{name}}",
     "rename": "Renombrar",
     "duplicate": "Duplicar",

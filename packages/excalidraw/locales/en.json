@@ -423,6 +423,8 @@
     "firstCanvas": "Canvas 1",
     "copyName": "{{name}} (copy)",
     "back": "All canvases",
+    "breadcrumbHome": "Canvases",
+    "renameCurrent": "Rename canvas",
     "actions": "Actions for {{name}}",
     "rename": "Rename",
     "duplicate": "Duplicate",

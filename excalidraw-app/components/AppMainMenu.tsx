@@ -17,7 +17,7 @@ import { isExcalidrawPlusSignedUser } from "../app_constants";
 import { showGallery } from "../data/canvasActions";
 import { pickAndImportFiles } from "../data/canvasImport";
 
-import { galleryIcon } from "./CanvasGallery/BackToGalleryButton";
+import { galleryIcon } from "./CanvasGallery/CanvasBreadcrumb";
 import { saveDebugState } from "./DebugCanvas";
 
 export const AppMainMenu: React.FC<{

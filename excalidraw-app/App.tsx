@@ -99,7 +99,7 @@ import Collab, {
 } from "./collab/Collab";
 import { AppFooter } from "./components/AppFooter";
 import { AppMainMenu } from "./components/AppMainMenu";
-import { BackToGalleryButton } from "./components/CanvasGallery/BackToGalleryButton";
+import { CanvasBreadcrumb } from "./components/CanvasGallery/CanvasBreadcrumb";
 import { CanvasGalleryScreen } from "./components/CanvasGallery/CanvasGalleryScreen";
 import { AppWelcomeScreen } from "./components/AppWelcomeScreen";
 import {
@@ -1028,7 +1028,7 @@ const ExcalidrawWrapper = () => {
         }}
         langCode={langCode}
         renderCustomStats={renderCustomStats}
-        renderTopLeftUI={() => <BackToGalleryButton />}
+        renderTopLeftUI={(isMobile) => <CanvasBreadcrumb isMobile={isMobile} />}
         detectScroll={false}
         handleKeyboardGlobally={true}
         autoFocus={true}
