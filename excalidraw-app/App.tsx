@@ -16,9 +16,7 @@ import {
 } from "@excalidraw/excalidraw/components/CommandPalette/CommandPalette";
 import { ErrorDialog } from "@excalidraw/excalidraw/components/ErrorDialog";
 import { OverwriteConfirmDialog } from "@excalidraw/excalidraw/components/OverwriteConfirm/OverwriteConfirm";
-import { openConfirmModal } from "@excalidraw/excalidraw/components/OverwriteConfirm/OverwriteConfirmState";
 import { ShareableLinkDialog } from "@excalidraw/excalidraw/components/ShareableLinkDialog";
-import Trans from "@excalidraw/excalidraw/components/Trans";
 import {
   APP_NAME,
   EVENT,
@@ -101,6 +99,8 @@ import Collab, {
 } from "./collab/Collab";
 import { AppFooter } from "./components/AppFooter";
 import { AppMainMenu } from "./components/AppMainMenu";
+import { CanvasBreadcrumb } from "./components/CanvasGallery/CanvasBreadcrumb";
+import { CanvasGalleryScreen } from "./components/CanvasGallery/CanvasGalleryScreen";
 import { AppWelcomeScreen } from "./components/AppWelcomeScreen";
 import {
   ExportToExcalidrawPlus,
@@ -117,10 +117,16 @@ import {
 
 import { updateStaleImageStatuses } from "./data/FileManager";
 import { FileStatusStore } from "./data/fileStatusStore";
+import { importUsernameFromLocalStorage } from "./data/localStorage";
 import {
-  importFromLocalStorage,
-  importUsernameFromLocalStorage,
-} from "./data/localStorage";
+  canvasStorageUnavailableAtom,
+  galleryOpenAtom,
+  refreshCanvasState,
+} from "./data/canvasAtoms";
+import { createNewCanvas, setCanvasEditorReady } from "./data/canvasActions";
+import { bootstrapCanvases } from "./data/canvasMigration";
+import { createCanvas, loadActiveCanvasState } from "./data/canvasStore";
+import { importFileAsCanvas, isExcalidrawSceneFile } from "./data/canvasImport";
 
 import { loadFilesFromFirebase } from "./data/firebase";
 import {
@@ -201,24 +207,11 @@ if (window.self !== window.top) {
   }
 }
 
-const shareableLinkConfirmDialog = {
-  title: t("overwriteConfirm.modal.shareableLink.title"),
-  description: (
-    <Trans
-      i18nKey="overwriteConfirm.modal.shareableLink.description"
-      bold={(text) => <strong>{text}</strong>}
-      br={() => <br />}
-    />
-  ),
-  actionLabel: t("overwriteConfirm.modal.shareableLink.button"),
-  color: "danger",
-} as const;
-
 const initializeScene = async (opts: {
   collabAPI: CollabAPI | null;
   excalidrawAPI: ExcalidrawImperativeAPI;
 }): Promise<
-  { scene: ExcalidrawInitialDataState | null } & (
+  { scene: ExcalidrawInitialDataState | null; importAsNewCanvas?: boolean } & (
     | { isExternalScene: true; id: string; key: string }
     | { isExternalScene: false; id?: null; key?: null }
   )
@@ -230,7 +223,7 @@ const initializeScene = async (opts: {
   );
   const externalUrlMatch = window.location.hash.match(/^#url=(.*)$/);
 
-  const localDataState = importFromLocalStorage();
+  const localDataState = await loadActiveCanvasState();
 
   let scene: Omit<
     RestoredDataState,
@@ -247,58 +240,34 @@ const initializeScene = async (opts: {
     appState: restoreAppState(localDataState?.appState, null),
   };
 
-  let roomLinkData = getCollaborationLinkData(window.location.href);
+  const roomLinkData = getCollaborationLinkData(window.location.href);
   const isExternalScene = !!(id || jsonBackendMatch || roomLinkData);
   if (isExternalScene) {
-    if (
-      // don't prompt if scene is empty
-      !scene.elements.length ||
-      // don't prompt for collab scenes because we don't override local storage
-      roomLinkData ||
-      // otherwise, prompt whether user wants to override current scene
-      (await openConfirmModal(shareableLinkConfirmDialog))
-    ) {
-      if (jsonBackendMatch) {
-        const imported = await importFromBackend(
-          jsonBackendMatch[1],
-          jsonBackendMatch[2],
-        );
+    // shared links never overwrite anything: `#json` is stored as a new canvas
+    if (jsonBackendMatch) {
+      const imported = await importFromBackend(
+        jsonBackendMatch[1],
+        jsonBackendMatch[2],
+      );
 
-        scene = {
-          elements: bumpElementVersions(
-            restoreElements(imported.elements, null, {
-              repairBindings: true,
-              deleteInvisibleElements: true,
-            }),
-            localDataState?.elements,
-          ),
-          appState: restoreAppState(
-            imported.appState,
-            // local appState when importing from backend to ensure we restore
-            // localStorage user settings which we do not persist on server.
-            localDataState?.appState,
-          ),
-        };
-      }
-      scene.scrollToContent = true;
-      if (!roomLinkData) {
-        window.history.replaceState({}, APP_NAME, window.location.origin);
-      }
-    } else {
-      // https://github.com/excalidraw/excalidraw/issues/1919
-      if (document.hidden) {
-        return new Promise((resolve, reject) => {
-          window.addEventListener(
-            "focus",
-            () => initializeScene(opts).then(resolve).catch(reject),
-            {
-              once: true,
-            },
-          );
-        });
-      }
-
-      roomLinkData = null;
+      scene = {
+        elements: bumpElementVersions(
+          restoreElements(imported.elements, null, {
+            repairBindings: true,
+            deleteInvisibleElements: true,
+          }),
+          localDataState?.elements,
+        ),
+        appState: restoreAppState(
+          imported.appState,
+          // local appState when importing from backend to ensure we restore
+          // localStorage user settings which we do not persist on server.
+          localDataState?.appState,
+        ),
+      };
+    }
+    scene.scrollToContent = true;
+    if (!roomLinkData) {
       window.history.replaceState({}, APP_NAME, window.location.origin);
     }
   } else if (externalUrlMatch) {
@@ -308,12 +277,7 @@ const initializeScene = async (opts: {
     try {
       const request = await fetch(window.decodeURIComponent(url));
       const data = await loadFromBlob(await request.blob(), null, null);
-      if (
-        !scene.elements.length ||
-        (await openConfirmModal(shareableLinkConfirmDialog))
-      ) {
-        return { scene: data, isExternalScene };
-      }
+      return { scene: data, isExternalScene, importAsNewCanvas: true };
     } catch (error: any) {
       return {
         scene: {
@@ -366,8 +330,9 @@ const initializeScene = async (opts: {
           isExternalScene,
           id: jsonBackendMatch[1],
           key: jsonBackendMatch[2],
+          importAsNewCanvas: true,
         }
-      : { scene, isExternalScene: false };
+      : { scene, isExternalScene: false, importAsNewCanvas: false };
   }
   return { scene: null, isExternalScene: false };
 };
@@ -562,10 +527,33 @@ const ExcalidrawWrapper = () => {
       return;
     }
 
-    initializeScene({ collabAPI, excalidrawAPI }).then(async (data) => {
-      loadImages(data, /* isInitialLoad */ true);
-      initialStatePromiseRef.current.promise.resolve(data.scene);
-    });
+    bootstrapCanvases()
+      .then(async (index) => {
+        if (!index) {
+          appJotaiStore.set(canvasStorageUnavailableAtom, true);
+        } else {
+          try {
+            await refreshCanvasState();
+          } catch (error) {
+            console.error(error);
+          }
+        }
+        return initializeScene({ collabAPI, excalidrawAPI });
+      })
+      .then(async (data) => {
+        if (data.importAsNewCanvas) {
+          // the editor is still empty, so nothing of the previous canvas can be overwritten
+          try {
+            await createCanvas({ activate: true });
+            await refreshCanvasState();
+          } catch (error) {
+            console.error(error);
+          }
+        }
+        loadImages(data, /* isInitialLoad */ true);
+        initialStatePromiseRef.current.promise.resolve(data.scene);
+        setCanvasEditorReady(true);
+      });
 
     const onHashChange = async (event: HashChangeEvent) => {
       event.preventDefault();
@@ -577,9 +565,16 @@ const ExcalidrawWrapper = () => {
         ) {
           collabAPI.stopCollaboration(false);
         }
+        if (isCollaborationLink(window.location.href)) {
+          // a room link goes straight to the editor
+          appJotaiStore.set(galleryOpenAtom, false);
+        }
         excalidrawAPI.updateScene({ appState: { isLoading: true } });
 
-        initializeScene({ collabAPI, excalidrawAPI }).then((data) => {
+        initializeScene({ collabAPI, excalidrawAPI }).then(async (data) => {
+          if (data.importAsNewCanvas) {
+            await createNewCanvas(excalidrawAPI);
+          }
           loadImages(data);
           if (data.scene) {
             excalidrawAPI.updateScene({
@@ -604,12 +599,23 @@ const ExcalidrawWrapper = () => {
       ) {
         // don't sync if local state is newer or identical to browser state
         if (isBrowserStorageStateNewer(STORAGE_KEYS.VERSION_DATA_STATE)) {
-          const localDataState = importFromLocalStorage();
+          // keep the gallery list in sync with other tabs
+          refreshCanvasState();
           const username = importUsernameFromLocalStorage();
           setLangCode(getPreferredLanguage());
-          excalidrawAPI.updateScene({
-            ...localDataState,
-            captureUpdate: CaptureUpdateAction.NEVER,
+          loadActiveCanvasState().then((localDataState) => {
+            // null: this tab's canvas was deleted elsewhere; keep the editor as is
+            if (localDataState) {
+              excalidrawAPI.updateScene({
+                ...localDataState,
+                // the theme is an app-wide preference, not part of a canvas
+                appState: {
+                  ...localDataState.appState,
+                  theme: excalidrawAPI.getAppState().theme,
+                },
+                captureUpdate: CaptureUpdateAction.NEVER,
+              });
+            }
           });
           LibraryIndexedDBAdapter.load().then((data) => {
             if (data) {
@@ -675,6 +681,7 @@ const ExcalidrawWrapper = () => {
     document.addEventListener(EVENT.VISIBILITY_CHANGE, visibilityChange, false);
     window.addEventListener(EVENT.FOCUS, visibilityChange, false);
     return () => {
+      setCanvasEditorReady(false);
       window.removeEventListener(EVENT.HASHCHANGE, onHashChange, false);
       window.removeEventListener(EVENT.UNLOAD, onUnload, false);
       window.removeEventListener(EVENT.BLUR, visibilityChange, false);
@@ -686,6 +693,35 @@ const ExcalidrawWrapper = () => {
       );
     };
   }, [isCollabDisabled, collabAPI, excalidrawAPI, setLangCode, loadImages]);
+
+  useEffect(() => {
+    if (!excalidrawAPI) {
+      return;
+    }
+    // capture phase: runs before the editor, which would replace the scene
+    const onDrop = async (event: DragEvent) => {
+      const files = Array.from(event.dataTransfer?.files ?? []).filter(
+        isExcalidrawSceneFile,
+      );
+      if (!files.length) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      for (const file of files) {
+        try {
+          await importFileAsCanvas(excalidrawAPI, file);
+        } catch (error: any) {
+          excalidrawAPI.setToast({
+            message: error?.message || t("canvases.errors.importFailed"),
+            closable: true,
+          });
+        }
+      }
+    };
+    window.addEventListener("drop", onDrop, true);
+    return () => window.removeEventListener("drop", onDrop, true);
+  }, [excalidrawAPI]);
 
   useEffect(() => {
     const unloadHandler = (event: BeforeUnloadEvent) => {
@@ -824,6 +860,7 @@ const ExcalidrawWrapper = () => {
   const isOffline = useAtomValue(isOfflineAtom);
 
   const localStorageQuotaExceeded = useAtomValue(localStorageQuotaExceededAtom);
+  const galleryOpen = useAtomValue(galleryOpenAtom);
 
   const onCollabDialogOpen = useCallback(
     () => setShareDialogState({ isOpen: true, type: "collaborationOnly" }),
@@ -941,6 +978,8 @@ const ExcalidrawWrapper = () => {
   return (
     <div
       style={{ height: "100%" }}
+      // nothing of the editor must be reachable while the gallery covers it
+      inert={galleryOpen}
       className={clsx("excalidraw-app", {
         "is-collaborating": isCollaborating,
       })}
@@ -955,6 +994,8 @@ const ExcalidrawWrapper = () => {
         onPointerUpdate={collabAPI?.onPointerUpdate}
         UIOptions={{
           canvasActions: {
+            // opening a file always creates a new canvas (see the "open as new canvas" menu item)
+            loadScene: false,
             toggleTheme: true,
             export: {
               onExportToBackend,
@@ -987,6 +1028,7 @@ const ExcalidrawWrapper = () => {
         }}
         langCode={langCode}
         renderCustomStats={renderCustomStats}
+        renderTopLeftUI={(isMobile) => <CanvasBreadcrumb isMobile={isMobile} />}
         detectScroll={false}
         handleKeyboardGlobally={true}
         autoFocus={true}
@@ -1101,6 +1143,7 @@ const ExcalidrawWrapper = () => {
         />
 
         <AppSidebar />
+        <CanvasGalleryScreen />
 
         {errorMessage && (
           <ErrorDialog onClose={() => setErrorMessage("")}>

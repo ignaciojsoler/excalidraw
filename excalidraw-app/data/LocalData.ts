@@ -10,23 +10,8 @@
  *   (localStorage, indexedDB).
  */
 
-import { clearAppStateForLocalStorage } from "@excalidraw/excalidraw/appState";
-import {
-  CANVAS_SEARCH_TAB,
-  DEFAULT_SIDEBAR,
-  debounce,
-} from "@excalidraw/common";
-import {
-  createStore,
-  entries,
-  del,
-  getMany,
-  set,
-  setMany,
-  get,
-} from "idb-keyval";
-
-import { getNonDeletedElements } from "@excalidraw/element";
+import { debounce } from "@excalidraw/common";
+import { createStore, get, set } from "idb-keyval";
 
 import type { LibraryPersistedData } from "@excalidraw/excalidraw/data/library";
 import type { ImportedDataState } from "@excalidraw/excalidraw/data/types";
@@ -41,88 +26,93 @@ import type { MaybePromise } from "@excalidraw/common/utility-types";
 import { appJotaiStore, atom } from "../app-jotai";
 import { SAVE_TO_LOCAL_STORAGE_TIMEOUT, STORAGE_KEYS } from "../app_constants";
 
+import { canvasSaveErrorAtom } from "./canvasAtoms";
+import {
+  deleteCanvasFiles,
+  getActiveCanvasId,
+  getCanvasFiles,
+  listCanvasFiles,
+  saveScene,
+  setCanvasFiles,
+  toStoredScene,
+} from "./canvasStore";
 import { FileManager } from "./FileManager";
 import { FileStatusStore } from "./fileStatusStore";
 import { Locker } from "./Locker";
 import { updateBrowserStateVersion } from "./tabSync";
 
-const filesStore = createStore("files-db", "files-store");
-
 export const localStorageQuotaExceededAtom = atom(false);
 
 class LocalFileManager extends FileManager {
+  /** only looks at the active canvas; other canvases' files are never touched */
   clearObsoleteFiles = async (opts: { currentFileIds: FileId[] }) => {
-    await entries(filesStore).then((entries) => {
-      for (const [id, imageData] of entries as [FileId, BinaryFileData][]) {
-        // if image is unused (not on canvas) & is older than 1 day, delete it
-        // from storage. We check `lastRetrieved` we care about the last time
-        // the image was used (loaded on canvas), not when it was initially
-        // created.
-        if (
+    const canvasId = getActiveCanvasId();
+    if (!canvasId) {
+      return;
+    }
+    const files = await listCanvasFiles(canvasId);
+    const obsolete = files
+      .filter(
+        (imageData) =>
+          // if image is unused (not on canvas) & is older than 1 day, delete
+          // it. We check `lastRetrieved` because we care about the last time
+          // the image was used (loaded on canvas), not when it was created.
           (!imageData.lastRetrieved ||
             Date.now() - imageData.lastRetrieved > 24 * 3600 * 1000) &&
-          !opts.currentFileIds.includes(id as FileId)
-        ) {
-          del(id, filesStore);
-        }
-      }
-    });
+          !opts.currentFileIds.includes(imageData.id),
+      )
+      .map((imageData) => imageData.id);
+    await deleteCanvasFiles(canvasId, obsolete);
   };
 }
 
-const saveDataStateToLocalStorage = (
+const saveDataStateToCanvas = async (
+  canvasId: string | null,
   elements: readonly ExcalidrawElement[],
   appState: AppState,
 ) => {
-  const localStorageQuotaExceeded = appJotaiStore.get(
-    localStorageQuotaExceededAtom,
-  );
-  try {
-    const _appState = clearAppStateForLocalStorage(appState);
+  if (!canvasId) {
+    // storage unavailable: nothing to persist to
+    return;
+  }
+  const quotaExceeded = appJotaiStore.get(localStorageQuotaExceededAtom);
+  const scene = toStoredScene(elements, appState);
 
-    if (
-      _appState.openSidebar?.name === DEFAULT_SIDEBAR.name &&
-      _appState.openSidebar.tab === CANVAS_SEARCH_TAB
-    ) {
-      _appState.openSidebar = null;
-    }
-
-    localStorage.setItem(
-      STORAGE_KEYS.LOCAL_STORAGE_ELEMENTS,
-      JSON.stringify(getNonDeletedElements(elements)),
-    );
-    localStorage.setItem(
-      STORAGE_KEYS.LOCAL_STORAGE_APP_STATE,
-      JSON.stringify(_appState),
-    );
-    updateBrowserStateVersion(STORAGE_KEYS.VERSION_DATA_STATE);
-    if (localStorageQuotaExceeded) {
-      appJotaiStore.set(localStorageQuotaExceededAtom, false);
-    }
-  } catch (error: any) {
-    // Unable to access window.localStorage
-    console.error(error);
-    if (isQuotaExceededError(error) && !localStorageQuotaExceeded) {
-      appJotaiStore.set(localStorageQuotaExceededAtom, true);
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      await saveScene(canvasId, scene);
+      updateBrowserStateVersion(STORAGE_KEYS.VERSION_DATA_STATE);
+      appJotaiStore.set(canvasSaveErrorAtom, false);
+      if (quotaExceeded) {
+        appJotaiStore.set(localStorageQuotaExceededAtom, false);
+      }
+      return;
+    } catch (error: any) {
+      console.error(error);
+      if (isQuotaExceededError(error) && !quotaExceeded) {
+        appJotaiStore.set(localStorageQuotaExceededAtom, true);
+      }
     }
   }
+  appJotaiStore.set(canvasSaveErrorAtom, true);
 };
 
 const isQuotaExceededError = (error: any) => {
   return error instanceof DOMException && error.name === "QuotaExceededError";
 };
 
-type SavingLockTypes = "collaboration";
+type SavingLockTypes = "collaboration" | "canvas-switch";
 
 export class LocalData {
   private static _save = debounce(
     async (
+      canvasId: string | null,
       elements: readonly ExcalidrawElement[],
       appState: AppState,
       files: BinaryFiles,
       onFilesSaved: () => void,
     ) => {
-      saveDataStateToLocalStorage(elements, appState);
+      await saveDataStateToCanvas(canvasId, elements, appState);
 
       await this.fileStorage.saveFiles({
         elements,
@@ -133,7 +123,6 @@ export class LocalData {
     SAVE_TO_LOCAL_STORAGE_TIMEOUT,
   );
 
-  /** Saves DataState, including files. Bails if saving is paused */
   static save = (
     elements: readonly ExcalidrawElement[],
     appState: AppState,
@@ -142,8 +131,14 @@ export class LocalData {
   ) => {
     // we need to make the `isSavePaused` check synchronously (undebounced)
     if (!this.isSavePaused()) {
-      this._save(elements, appState, files, onFilesSaved);
+      // capture the canvas now: it must not change while the save is debounced
+      this._save(getActiveCanvasId(), elements, appState, files, onFilesSaved);
     }
+  };
+
+  /** drops a debounced save that has not run yet (used when switching canvas) */
+  static cancelPendingSave = () => {
+    this._save.cancel();
   };
 
   static flushSave = () => {
@@ -168,42 +163,39 @@ export class LocalData {
 
   static fileStorage = new LocalFileManager({
     onFileStatusChange: FileStatusStore.updateStatuses.bind(FileStatusStore),
-    getFiles(ids) {
-      return getMany(ids, filesStore).then(
-        async (filesData: (BinaryFileData | undefined)[]) => {
-          const loadedFiles: BinaryFileData[] = [];
-          const erroredFiles = new Map<FileId, true>();
+    async getFiles(ids) {
+      const canvasId = getActiveCanvasId();
+      const loadedFiles: BinaryFileData[] = [];
+      const erroredFiles = new Map<FileId, true>();
+      if (!canvasId) {
+        ids.forEach((id) => erroredFiles.set(id, true));
+        return { loadedFiles, erroredFiles };
+      }
 
-          const filesToSave: [FileId, BinaryFileData][] = [];
+      const filesData = await getCanvasFiles(canvasId, ids);
+      const filesToSave: BinaryFileData[] = [];
 
-          filesData.forEach((data, index) => {
-            const id = ids[index];
-            if (data) {
-              const _data: BinaryFileData = {
-                ...data,
-                lastRetrieved: Date.now(),
-              };
-              filesToSave.push([id, _data]);
-              loadedFiles.push(_data);
-            } else {
-              erroredFiles.set(id, true);
-            }
-          });
+      filesData.forEach((data, index) => {
+        if (data) {
+          const _data: BinaryFileData = { ...data, lastRetrieved: Date.now() };
+          filesToSave.push(_data);
+          loadedFiles.push(_data);
+        } else {
+          erroredFiles.set(ids[index], true);
+        }
+      });
 
-          try {
-            // save loaded files back to storage with updated `lastRetrieved`
-            setMany(filesToSave, filesStore);
-          } catch (error) {
-            console.warn(error);
-          }
-
-          return { loadedFiles, erroredFiles };
-        },
+      // save loaded files back to storage with updated `lastRetrieved`
+      setCanvasFiles(canvasId, filesToSave).catch((error) =>
+        console.warn(error),
       );
+
+      return { loadedFiles, erroredFiles };
     },
     async saveFiles({ addedFiles }) {
       const savedFiles = new Map<FileId, BinaryFileData>();
       const erroredFiles = new Map<FileId, BinaryFileData>();
+      const canvasId = getActiveCanvasId();
 
       // before we use `storage` event synchronization, let's update the flag
       // optimistically. Hopefully nothing fails, and an IDB read executed
@@ -213,7 +205,10 @@ export class LocalData {
       await Promise.all(
         [...addedFiles].map(async ([id, fileData]) => {
           try {
-            await set(id, fileData, filesStore);
+            if (!canvasId) {
+              throw new Error("no active canvas");
+            }
+            await setCanvasFiles(canvasId, [fileData]);
             savedFiles.set(id, fileData);
           } catch (error: any) {
             console.error(error);
