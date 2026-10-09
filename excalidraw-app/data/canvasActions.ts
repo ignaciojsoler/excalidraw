@@ -10,7 +10,9 @@ import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
 
 import { STORAGE_KEYS } from "../app_constants";
 
-import { refreshCanvasState } from "./canvasAtoms";
+import { appJotaiStore } from "../app-jotai";
+
+import { galleryOpenAtom, refreshCanvasState } from "./canvasAtoms";
 import {
   createCanvas,
   deleteCanvas,
@@ -111,17 +113,30 @@ export const switchCanvas = async (
   api: ExcalidrawImperativeAPI,
   targetId: string,
 ) => {
-  if (!editorReady || targetId === getActiveCanvasId()) {
+  if (!editorReady) {
     return;
   }
-  LocalData.pauseSave("canvas-switch");
-  try {
-    await saveCurrentCanvasNow(api, { withThumbnail: true });
-    await openCanvasInEditor(api, targetId);
-    await refreshCanvasState();
-  } finally {
-    LocalData.resumeSave("canvas-switch");
+  if (targetId !== getActiveCanvasId()) {
+    LocalData.pauseSave("canvas-switch");
+    try {
+      await saveCurrentCanvasNow(api, { withThumbnail: true });
+      await openCanvasInEditor(api, targetId);
+      await refreshCanvasState();
+    } finally {
+      LocalData.resumeSave("canvas-switch");
+    }
   }
+  appJotaiStore.set(galleryOpenAtom, false);
+};
+
+/** saves the open canvas (with thumbnail) and shows the full-screen gallery */
+export const showGallery = async (api: ExcalidrawImperativeAPI) => {
+  if (!editorReady) {
+    return;
+  }
+  await saveCurrentCanvasNow(api, { withThumbnail: true });
+  await refreshCanvasState();
+  appJotaiStore.set(galleryOpenAtom, true);
 };
 
 /** creates an empty canvas and opens it */

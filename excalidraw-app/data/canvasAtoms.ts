@@ -9,6 +9,13 @@ export const canvasIndexAtom = atom<CanvasIndex>({
   activeCanvasId: null,
 });
 
+const startsOnExternalScene = () =>
+  /^#(room|json|url)=/.test(window.location.hash) ||
+  new URLSearchParams(window.location.search).has("id");
+
+/** full-screen gallery shown over the editor; hidden when opening a shared link */
+export const galleryOpenAtom = atom(!startsOnExternalScene());
+
 /** canvas open in this tab */
 export const currentCanvasIdAtom = atom<string | null>(null);
 

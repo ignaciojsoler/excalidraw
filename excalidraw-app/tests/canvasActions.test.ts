@@ -6,11 +6,14 @@ import type {
   ExcalidrawImperativeAPI,
 } from "@excalidraw/excalidraw/types";
 
+import { appJotaiStore } from "../app-jotai";
+import { galleryOpenAtom } from "../data/canvasAtoms";
 import {
   createNewCanvas,
   duplicateCanvasAction,
   removeCanvas,
   setCanvasEditorReady,
+  showGallery,
   switchCanvas,
 } from "../data/canvasActions";
 import {
@@ -175,5 +178,48 @@ describe("canvasActions", () => {
     expect(index.canvases).toHaveLength(1);
     expect(index.canvases[0].id).not.toBe(a.id);
     expect(getElements()).toHaveLength(0);
+  });
+
+  it("switchCanvas closes the gallery, also when the target is already open", async () => {
+    const a = await createCanvas({ activate: true });
+    const b = await createCanvas();
+    const { api } = makeApi();
+
+    appJotaiStore.set(galleryOpenAtom, true);
+    await switchCanvas(api, a.id);
+    expect(appJotaiStore.get(galleryOpenAtom)).toBe(false);
+    expect(api.updateScene).not.toHaveBeenCalled();
+
+    appJotaiStore.set(galleryOpenAtom, true);
+    await switchCanvas(api, b.id);
+    expect(appJotaiStore.get(galleryOpenAtom)).toBe(false);
+  });
+
+  it("createNewCanvas closes the gallery", async () => {
+    await createCanvas({ activate: true });
+    const { api } = makeApi();
+    appJotaiStore.set(galleryOpenAtom, true);
+    await createNewCanvas(api);
+    expect(appJotaiStore.get(galleryOpenAtom)).toBe(false);
+  });
+
+  it("showGallery saves the open canvas before opening the gallery", async () => {
+    const a = await createCanvas({ activate: true });
+    const { api } = makeApi([rect(), rect()]);
+    appJotaiStore.set(galleryOpenAtom, false);
+
+    await showGallery(api);
+
+    expect((await loadScene(a.id))?.elements).toHaveLength(2);
+    expect(appJotaiStore.get(galleryOpenAtom)).toBe(true);
+  });
+
+  it("showGallery does nothing before the editor is ready", async () => {
+    await createCanvas({ activate: true });
+    const { api } = makeApi();
+    setCanvasEditorReady(false);
+    appJotaiStore.set(galleryOpenAtom, false);
+    await showGallery(api);
+    expect(appJotaiStore.get(galleryOpenAtom)).toBe(false);
   });
 });

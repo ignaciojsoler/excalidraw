@@ -6,26 +6,7 @@ import {
 import { LinkButton } from "@excalidraw/excalidraw/components/LinkButton";
 import { useUIAppState } from "@excalidraw/excalidraw/context/ui-appState";
 
-import { CanvasSidebar } from "./CanvasSidebar/CanvasSidebar";
-
 import "./AppSidebar.scss";
-
-const canvasListIcon = (
-  <svg
-    width="20"
-    height="20"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.5"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-  >
-    <rect x="3" y="4" width="18" height="6" rx="1.5" />
-    <rect x="3" y="14" width="18" height="6" rx="1.5" />
-  </svg>
-);
 
 type SidebarPromoCopyProps = {
   text: string;
@@ -91,12 +72,6 @@ export const AppSidebar = () => {
     <DefaultSidebar>
       <DefaultSidebar.TabTriggers>
         <Sidebar.TabTrigger
-          tab="canvases"
-          style={{ opacity: openSidebar?.tab === "canvases" ? 1 : 0.4 }}
-        >
-          {canvasListIcon}
-        </Sidebar.TabTrigger>
-        <Sidebar.TabTrigger
           tab="comments"
           style={{ opacity: openSidebar?.tab === "comments" ? 1 : 0.4 }}
         >
@@ -109,9 +84,6 @@ export const AppSidebar = () => {
           {presentationIcon}
         </Sidebar.TabTrigger>
       </DefaultSidebar.TabTriggers>
-      <Sidebar.Tab tab="canvases">
-        <CanvasSidebar />
-      </Sidebar.Tab>
       <Sidebar.Tab tab="comments">
         <div className="app-sidebar-promo-container">
           <div

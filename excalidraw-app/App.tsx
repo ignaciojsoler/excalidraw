@@ -99,6 +99,8 @@ import Collab, {
 } from "./collab/Collab";
 import { AppFooter } from "./components/AppFooter";
 import { AppMainMenu } from "./components/AppMainMenu";
+import { BackToGalleryButton } from "./components/CanvasGallery/BackToGalleryButton";
+import { CanvasGalleryScreen } from "./components/CanvasGallery/CanvasGalleryScreen";
 import { AppWelcomeScreen } from "./components/AppWelcomeScreen";
 import {
   ExportToExcalidrawPlus,
@@ -118,6 +120,7 @@ import { FileStatusStore } from "./data/fileStatusStore";
 import { importUsernameFromLocalStorage } from "./data/localStorage";
 import {
   canvasStorageUnavailableAtom,
+  galleryOpenAtom,
   refreshCanvasState,
 } from "./data/canvasAtoms";
 import { createNewCanvas, setCanvasEditorReady } from "./data/canvasActions";
@@ -562,6 +565,10 @@ const ExcalidrawWrapper = () => {
         ) {
           collabAPI.stopCollaboration(false);
         }
+        if (isCollaborationLink(window.location.href)) {
+          // a room link goes straight to the editor
+          appJotaiStore.set(galleryOpenAtom, false);
+        }
         excalidrawAPI.updateScene({ appState: { isLoading: true } });
 
         initializeScene({ collabAPI, excalidrawAPI }).then(async (data) => {
@@ -848,6 +855,7 @@ const ExcalidrawWrapper = () => {
   const isOffline = useAtomValue(isOfflineAtom);
 
   const localStorageQuotaExceeded = useAtomValue(localStorageQuotaExceededAtom);
+  const galleryOpen = useAtomValue(galleryOpenAtom);
 
   const onCollabDialogOpen = useCallback(
     () => setShareDialogState({ isOpen: true, type: "collaborationOnly" }),
@@ -965,6 +973,8 @@ const ExcalidrawWrapper = () => {
   return (
     <div
       style={{ height: "100%" }}
+      // nothing of the editor must be reachable while the gallery covers it
+      inert={galleryOpen}
       className={clsx("excalidraw-app", {
         "is-collaborating": isCollaborating,
       })}
@@ -1013,6 +1023,7 @@ const ExcalidrawWrapper = () => {
         }}
         langCode={langCode}
         renderCustomStats={renderCustomStats}
+        renderTopLeftUI={() => <BackToGalleryButton />}
         detectScroll={false}
         handleKeyboardGlobally={true}
         autoFocus={true}
@@ -1127,6 +1138,7 @@ const ExcalidrawWrapper = () => {
         />
 
         <AppSidebar />
+        <CanvasGalleryScreen />
 
         {errorMessage && (
           <ErrorDialog onClose={() => setErrorMessage("")}>

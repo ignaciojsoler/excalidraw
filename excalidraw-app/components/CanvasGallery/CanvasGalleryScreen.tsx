@@ -1,12 +1,15 @@
 import React, { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useExcalidrawAPI } from "@excalidraw/excalidraw";
 import { useI18n } from "@excalidraw/excalidraw/i18n";
+import { useCreatePortalContainer } from "@excalidraw/excalidraw/hooks/useCreatePortalContainer";
 import { openConfirmModal } from "@excalidraw/excalidraw/components/OverwriteConfirm/OverwriteConfirmState";
 import { serializeAsJSON } from "@excalidraw/excalidraw/data/json";
 
 import { useAtomValue } from "../../app-jotai";
 import {
   canvasIndexAtom,
+  galleryOpenAtom,
   canvasSaveErrorAtom,
   canvasStorageUnavailableAtom,
   currentCanvasIdAtom,
@@ -34,11 +37,24 @@ import {
 import { pickAndImportFiles } from "../../data/canvasImport";
 import { localStorageQuotaExceededAtom } from "../../data/LocalData";
 
-import { CanvasList } from "./CanvasList";
+import { CanvasGallery } from "./CanvasGallery";
 
-export const CanvasSidebar = () => {
+/**
+ * Rendered in `document.body` (like the editor's modals) so that the editor
+ * can be made `inert` while the gallery is open without affecting the gallery
+ * or the confirm dialogs.
+ */
+const GalleryPortal = (props: { children: React.ReactNode }) => {
+  const container = useCreatePortalContainer({
+    className: "canvas-gallery-portal",
+  });
+  return container ? createPortal(props.children, container) : null;
+};
+
+export const CanvasGalleryScreen = () => {
   const excalidrawAPI = useExcalidrawAPI();
   const { t } = useI18n();
+  const galleryOpen = useAtomValue(galleryOpenAtom);
   const index = useAtomValue(canvasIndexAtom);
   const currentId = useAtomValue(currentCanvasIdAtom);
   const storageUnavailable = useAtomValue(canvasStorageUnavailableAtom);
@@ -63,7 +79,7 @@ export const CanvasSidebar = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [signature]);
 
-  if (!excalidrawAPI) {
+  if (!excalidrawAPI || !galleryOpen) {
     return null;
   }
 
@@ -152,51 +168,57 @@ export const CanvasSidebar = () => {
     });
 
   return (
-    <CanvasList
-      canvases={index.canvases}
-      currentId={currentId}
-      thumbnails={thumbnails}
-      onSelect={(id) => run(() => switchCanvas(excalidrawAPI, id))}
-      onCreate={() => run(() => createNewCanvas(excalidrawAPI))}
-      onRename={(id, name) => run(() => renameCanvasAction(id, name))}
-      onDuplicate={(id) => run(() => duplicateCanvasAction(excalidrawAPI, id))}
-      onDelete={confirmDelete}
-      onExport={exportOne}
-      banners={
-        <>
-          {storageUnavailable && (
-            <div className="canvas-sidebar__banner">
-              {t("canvases.banner.storageUnavailable")}
-            </div>
-          )}
-          {quotaExceeded && (
-            <div className="canvas-sidebar__banner">
-              {t("canvases.banner.quota")}
-            </div>
-          )}
-          {saveError && !quotaExceeded && (
-            <div className="canvas-sidebar__banner">
-              {t("canvases.banner.saveError")}
-            </div>
-          )}
-        </>
-      }
-      footer={
-        <>
+    <GalleryPortal>
+      <CanvasGallery
+        canvases={index.canvases}
+        currentId={currentId}
+        thumbnails={thumbnails}
+        onSelect={(id) => run(() => switchCanvas(excalidrawAPI, id))}
+        onCreate={() => run(() => createNewCanvas(excalidrawAPI))}
+        onRename={(id, name) => run(() => renameCanvasAction(id, name))}
+        onDuplicate={(id) =>
+          run(() => duplicateCanvasAction(excalidrawAPI, id))
+        }
+        onDelete={confirmDelete}
+        onExport={exportOne}
+        banners={
+          <>
+            {storageUnavailable && (
+              <div className="canvas-gallery__banner">
+                {t("canvases.banner.storageUnavailable")}
+              </div>
+            )}
+            {quotaExceeded && (
+              <div className="canvas-gallery__banner">
+                {t("canvases.banner.quota")}
+              </div>
+            )}
+            {saveError && !quotaExceeded && (
+              <div className="canvas-gallery__banner">
+                {t("canvases.banner.saveError")}
+              </div>
+            )}
+          </>
+        }
+        headerActions={
           <button
             type="button"
             onClick={() => run(() => pickAndImportFiles(excalidrawAPI))}
           >
             {t("canvases.importFile")}
           </button>
-          <button type="button" onClick={exportAll}>
-            {t("canvases.exportAll")}
-          </button>
-          <button type="button" onClick={importBackupFile}>
-            {t("canvases.importBackup")}
-          </button>
-        </>
-      }
-    />
+        }
+        footer={
+          <>
+            <button type="button" onClick={exportAll}>
+              {t("canvases.exportAll")}
+            </button>
+            <button type="button" onClick={importBackupFile}>
+              {t("canvases.importBackup")}
+            </button>
+          </>
+        }
+      />
+    </GalleryPortal>
   );
 };

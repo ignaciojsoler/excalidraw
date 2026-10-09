@@ -1,8 +1,8 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { EditorJotaiProvider } from "@excalidraw/excalidraw/editor-jotai";
 
-import { CanvasList } from "../components/CanvasSidebar/CanvasList";
-import { formatRelativeTime } from "../components/CanvasSidebar/formatRelativeTime";
+import { CanvasGallery } from "../components/CanvasGallery/CanvasGallery";
+import { formatRelativeTime } from "../components/CanvasGallery/formatRelativeTime";
 
 const NOW = 1_700_000_000_000;
 
@@ -13,7 +13,7 @@ const canvases = [
 ];
 
 const setup = (
-  overrides: Partial<React.ComponentProps<typeof CanvasList>> = {},
+  overrides: Partial<React.ComponentProps<typeof CanvasGallery>> = {},
 ) => {
   const handlers = {
     onSelect: vi.fn(),
@@ -25,7 +25,7 @@ const setup = (
   };
   render(
     <EditorJotaiProvider>
-      <CanvasList
+      <CanvasGallery
         canvases={canvases}
         currentId="c"
         thumbnails={new Map()}
@@ -38,7 +38,7 @@ const setup = (
 };
 
 describe("formatRelativeTime", () => {
-  it("formats in Spanish", () => {
+  it("formats relative times", () => {
     expect(formatRelativeTime(NOW - 10_000, NOW)).toBe("just now");
     expect(formatRelativeTime(NOW - 5 * 60_000, NOW)).toBe("5 min ago");
     expect(formatRelativeTime(NOW - 3 * 3600_000, NOW)).toBe("3 h ago");
@@ -46,7 +46,7 @@ describe("formatRelativeTime", () => {
   });
 });
 
-describe("CanvasList", () => {
+describe("CanvasGallery", () => {
   it("lists canvases most recently updated first", () => {
     setup();
     const names = screen.getAllByRole("listitem").map((li) => li.textContent);
@@ -114,6 +114,37 @@ describe("CanvasList", () => {
     fireEvent.click(screen.getByLabelText("Actions for Viejo"));
     fireEvent.click(screen.getByText("Delete"));
     expect(h.onDelete).toHaveBeenCalledWith("a");
+  });
+
+  it("shows an empty-state message when the search matches nothing", () => {
+    setup();
+    fireEvent.change(screen.getByPlaceholderText("Search canvases"), {
+      target: { value: "zzz" },
+    });
+    expect(screen.queryAllByRole("listitem")).toHaveLength(0);
+    expect(screen.getByText("No canvases match your search")).toBeTruthy();
+  });
+
+  it("renders headerActions next to the new-canvas button", () => {
+    setup({ headerActions: <button type="button">extra</button> });
+    expect(screen.getByText("extra")).toBeTruthy();
+  });
+
+  it("does not let key presses or paste escape to the document", () => {
+    setup();
+    const onDocumentKey = vi.fn();
+    const onDocumentPaste = vi.fn();
+    document.addEventListener("keydown", onDocumentKey);
+    document.addEventListener("paste", onDocumentPaste);
+
+    const root = screen.getByRole("dialog");
+    fireEvent.keyDown(root, { key: "Delete" });
+    fireEvent.paste(root);
+
+    expect(onDocumentKey).not.toHaveBeenCalled();
+    expect(onDocumentPaste).not.toHaveBeenCalled();
+    document.removeEventListener("keydown", onDocumentKey);
+    document.removeEventListener("paste", onDocumentPaste);
   });
 
   it("renders banners and footer slots", () => {

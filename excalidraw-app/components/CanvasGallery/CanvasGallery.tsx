@@ -3,11 +3,11 @@ import { useI18n } from "@excalidraw/excalidraw/i18n";
 
 import { formatRelativeTime } from "./formatRelativeTime";
 
-import "./CanvasSidebar.scss";
+import "./CanvasGallery.scss";
 
 import type { CanvasMeta } from "../../data/canvasStore";
 
-type CanvasListProps = {
+type CanvasGalleryProps = {
   canvases: readonly CanvasMeta[];
   currentId: string | null;
   thumbnails: ReadonlyMap<string, string>;
@@ -19,9 +19,10 @@ type CanvasListProps = {
   onExport: (id: string) => void;
   footer?: React.ReactNode;
   banners?: React.ReactNode;
+  headerActions?: React.ReactNode;
 };
 
-export const CanvasList = (props: CanvasListProps) => {
+export const CanvasGallery = (props: CanvasGalleryProps) => {
   const { t } = useI18n();
   const [query, setQuery] = useState("");
   const [menuId, setMenuId] = useState<string | null>(null);
@@ -46,42 +47,59 @@ export const CanvasList = (props: CanvasListProps) => {
     }
   };
 
+  // the editor listens on `document`; React already stopped the native event
+  // at the root, so this keeps keys/paste away from the hidden editor while
+  // leaving the default behavior (typing, pasting) inside the inputs intact
+  const stop = (event: React.SyntheticEvent) => event.stopPropagation();
+
   return (
-    <div className="canvas-sidebar">
-      <button
-        type="button"
-        className="canvas-sidebar__new"
-        onClick={props.onCreate}
-      >
-        {t("canvases.new")}
-      </button>
-      <input
-        className="canvas-sidebar__search"
-        type="search"
-        placeholder={t("canvases.search")}
-        value={query}
-        onChange={(event) => setQuery(event.target.value)}
-      />
+    <div
+      className="canvas-gallery"
+      role="dialog"
+      aria-label={t("canvases.title")}
+      onKeyDown={stop}
+      onKeyUp={stop}
+      onPaste={stop}
+    >
+      <div className="canvas-gallery__header">
+        <h1>{t("canvases.title")}</h1>
+        <button
+          type="button"
+          className="canvas-gallery__new"
+          onClick={props.onCreate}
+        >
+          {t("canvases.new")}
+        </button>
+        {props.headerActions}
+        <input
+          className="canvas-gallery__search"
+          type="search"
+          placeholder={t("canvases.search")}
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+        />
+      </div>
       {props.banners}
-      <ul className="canvas-sidebar__list">
+      {query.trim() && !visible.length && <p>{t("canvases.empty")}</p>}
+      <ul className="canvas-gallery__grid">
         {visible.map((canvas) => {
           const thumbnail = props.thumbnails.get(canvas.id);
           return (
             <li
               key={canvas.id}
-              className="canvas-sidebar__item"
+              className="canvas-gallery__item"
               aria-current={canvas.id === props.currentId ? "true" : undefined}
             >
               <div
-                className="canvas-sidebar__open"
+                className="canvas-gallery__open"
                 onClick={() =>
                   renamingId !== canvas.id && props.onSelect(canvas.id)
                 }
               >
-                <div className="canvas-sidebar__thumb">
+                <div className="canvas-gallery__thumb">
                   {thumbnail && <img src={thumbnail} alt="" />}
                 </div>
-                <div className="canvas-sidebar__meta">
+                <div className="canvas-gallery__meta">
                   {renamingId === canvas.id ? (
                     <input
                       autoFocus
@@ -99,20 +117,20 @@ export const CanvasList = (props: CanvasListProps) => {
                     />
                   ) : (
                     <span
-                      className="canvas-sidebar__name"
+                      className="canvas-gallery__name"
                       onDoubleClick={() => startRename(canvas)}
                     >
                       {canvas.name}
                     </span>
                   )}
-                  <span className="canvas-sidebar__time">
+                  <span className="canvas-gallery__time">
                     {formatRelativeTime(canvas.updatedAt)}
                   </span>
                 </div>
               </div>
               <button
                 type="button"
-                className="canvas-sidebar__menu-button"
+                className="canvas-gallery__menu-button"
                 aria-label={t("canvases.actions", { name: canvas.name })}
                 onClick={() =>
                   setMenuId(menuId === canvas.id ? null : canvas.id)
@@ -121,7 +139,7 @@ export const CanvasList = (props: CanvasListProps) => {
                 ⋯
               </button>
               {menuId === canvas.id && (
-                <div className="canvas-sidebar__menu" role="menu">
+                <div className="canvas-gallery__menu" role="menu">
                   <button type="button" onClick={() => startRename(canvas)}>
                     {t("canvases.rename")}
                   </button>
@@ -145,7 +163,7 @@ export const CanvasList = (props: CanvasListProps) => {
                   </button>
                   <button
                     type="button"
-                    className="canvas-sidebar__danger"
+                    className="canvas-gallery__danger"
                     onClick={() => {
                       setMenuId(null);
                       props.onDelete(canvas.id);
@@ -160,7 +178,7 @@ export const CanvasList = (props: CanvasListProps) => {
         })}
       </ul>
       {props.footer && (
-        <div className="canvas-sidebar__footer">{props.footer}</div>
+        <div className="canvas-gallery__footer">{props.footer}</div>
       )}
     </div>
   );
