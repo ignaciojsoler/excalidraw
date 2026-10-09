@@ -6,7 +6,7 @@ Spec: `docs/superpowers/specs/2026-10-08-multi-canvas-design.md`
 Cada task termina con `yarn test:typecheck`, `yarn fix`, sus tests y un commit.
 
 - [x] **Task 1**: `canvasStore` (IndexedDB): crear, renombrar, duplicar, borrar, escenas, miniaturas, files por canvas, índice serializado
-- [ ] **Task 2**: migración desde localStorage a "Canvas 1" y `bootstrapCanvases()`
+- [x] **Task 2**: migración desde localStorage a "Canvas 1" y `bootstrapCanvases()`
 - [ ] **Task 3**: backup (formato, validación, exportar/importar)
 - [ ] **Task 4**: `LocalData` y `App.tsx` guardan/cargan sobre el canvas activo (files aislados, `clearObsoleteFiles` acotado)
 - [ ] **Task 5**: acciones de canvas (cambiar, crear, duplicar, borrar, renombrar) con guardado previo y reset de historial
