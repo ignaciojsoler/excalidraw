@@ -122,6 +122,7 @@ import {
   canvasStorageUnavailableAtom,
   refreshCanvasState,
 } from "./data/canvasAtoms";
+import { setCanvasEditorReady } from "./data/canvasActions";
 import { bootstrapCanvases } from "./data/canvasMigration";
 import { loadActiveCanvasState } from "./data/canvasStore";
 
@@ -581,6 +582,7 @@ const ExcalidrawWrapper = () => {
       .then(async (data) => {
         loadImages(data, /* isInitialLoad */ true);
         initialStatePromiseRef.current.promise.resolve(data.scene);
+        setCanvasEditorReady(true);
       });
 
     const onHashChange = async (event: HashChangeEvent) => {
@@ -697,6 +699,7 @@ const ExcalidrawWrapper = () => {
     document.addEventListener(EVENT.VISIBILITY_CHANGE, visibilityChange, false);
     window.addEventListener(EVENT.FOCUS, visibilityChange, false);
     return () => {
+      setCanvasEditorReady(false);
       window.removeEventListener(EVENT.HASHCHANGE, onHashChange, false);
       window.removeEventListener(EVENT.UNLOAD, onUnload, false);
       window.removeEventListener(EVENT.BLUR, visibilityChange, false);
