@@ -112,4 +112,13 @@ describe("CanvasList", () => {
     fireEvent.click(screen.getByText("Borrar"));
     expect(h.onDelete).toHaveBeenCalledWith("a");
   });
+
+  it("renders banners and footer slots", () => {
+    setup({
+      banners: <div>sin espacio</div>,
+      footer: <button type="button">Exportar todos</button>,
+    });
+    expect(screen.getByText("sin espacio")).toBeTruthy();
+    expect(screen.getByText("Exportar todos")).toBeTruthy();
+  });
 });

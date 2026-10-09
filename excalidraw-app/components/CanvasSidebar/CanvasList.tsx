@@ -17,6 +17,7 @@ type CanvasListProps = {
   onDelete: (id: string) => void;
   onExport: (id: string) => void;
   footer?: React.ReactNode;
+  banners?: React.ReactNode;
 };
 
 export const CanvasList = (props: CanvasListProps) => {
@@ -59,6 +60,7 @@ export const CanvasList = (props: CanvasListProps) => {
         value={query}
         onChange={(event) => setQuery(event.target.value)}
       />
+      {props.banners}
       <ul className="canvas-sidebar__list">
         {visible.map((canvas) => {
           const thumbnail = props.thumbnails.get(canvas.id);

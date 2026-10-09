@@ -4,7 +4,18 @@ import { openConfirmModal } from "@excalidraw/excalidraw/components/OverwriteCon
 import { serializeAsJSON } from "@excalidraw/excalidraw/data/json";
 
 import { useAtomValue } from "../../app-jotai";
-import { canvasIndexAtom, currentCanvasIdAtom } from "../../data/canvasAtoms";
+import {
+  canvasIndexAtom,
+  canvasSaveErrorAtom,
+  canvasStorageUnavailableAtom,
+  currentCanvasIdAtom,
+  refreshCanvasState,
+} from "../../data/canvasAtoms";
+import {
+  downloadBackup,
+  importBackup,
+  parseBackup,
+} from "../../data/canvasBackup";
 import {
   createNewCanvas,
   duplicateCanvasAction,
@@ -20,6 +31,7 @@ import {
 } from "../../data/canvasStore";
 
 import { pickAndImportFiles } from "../../data/canvasImport";
+import { localStorageQuotaExceededAtom } from "../../data/LocalData";
 
 import { CanvasList } from "./CanvasList";
 
@@ -27,6 +39,9 @@ export const CanvasSidebar = () => {
   const excalidrawAPI = useExcalidrawAPI();
   const index = useAtomValue(canvasIndexAtom);
   const currentId = useAtomValue(currentCanvasIdAtom);
+  const storageUnavailable = useAtomValue(canvasStorageUnavailableAtom);
+  const saveError = useAtomValue(canvasSaveErrorAtom);
+  const quotaExceeded = useAtomValue(localStorageQuotaExceededAtom);
   const [thumbnails, setThumbnails] = useState<ReadonlyMap<string, string>>(
     new Map(),
   );
@@ -90,6 +105,36 @@ export const CanvasSidebar = () => {
       setTimeout(() => URL.revokeObjectURL(url), 0);
     });
 
+  const exportAll = () =>
+    run(async () => {
+      await saveCurrentCanvasNow(excalidrawAPI);
+      await downloadBackup();
+    });
+
+  const importBackupFile = () =>
+    run(
+      () =>
+        new Promise<void>((resolve, reject) => {
+          const input = document.createElement("input");
+          input.type = "file";
+          input.accept = ".json";
+          input.onchange = async () => {
+            try {
+              const file = input.files?.[0];
+              if (file) {
+                // validates everything before writing anything
+                await importBackup(parseBackup(await file.text()));
+                await refreshCanvasState();
+              }
+              resolve();
+            } catch (error) {
+              reject(error);
+            }
+          };
+          input.click();
+        }),
+    );
+
   const confirmDelete = (id: string) =>
     run(async () => {
       const name = index.canvases.find((c) => c.id === id)?.name ?? "";
@@ -117,13 +162,41 @@ export const CanvasSidebar = () => {
       onDuplicate={(id) => run(() => duplicateCanvasAction(excalidrawAPI, id))}
       onDelete={confirmDelete}
       onExport={exportOne}
+      banners={
+        <>
+          {storageUnavailable && (
+            <div className="canvas-sidebar__banner">
+              El almacenamiento del navegador no está disponible: solo se puede
+              usar un canvas y no se guardará.
+            </div>
+          )}
+          {quotaExceeded && (
+            <div className="canvas-sidebar__banner">
+              Sin espacio. Exportá un backup y borrá canvas viejos.
+            </div>
+          )}
+          {saveError && !quotaExceeded && (
+            <div className="canvas-sidebar__banner">
+              No guardado: los últimos cambios siguen solo en memoria.
+            </div>
+          )}
+        </>
+      }
       footer={
-        <button
-          type="button"
-          onClick={() => run(() => pickAndImportFiles(excalidrawAPI))}
-        >
-          Importar archivo
-        </button>
+        <>
+          <button
+            type="button"
+            onClick={() => run(() => pickAndImportFiles(excalidrawAPI))}
+          >
+            Importar archivo
+          </button>
+          <button type="button" onClick={exportAll}>
+            Exportar todos
+          </button>
+          <button type="button" onClick={importBackupFile}>
+            Importar backup
+          </button>
+        </>
       }
     />
   );
