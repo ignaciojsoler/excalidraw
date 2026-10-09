@@ -117,10 +117,13 @@ import {
 
 import { updateStaleImageStatuses } from "./data/FileManager";
 import { FileStatusStore } from "./data/fileStatusStore";
+import { importUsernameFromLocalStorage } from "./data/localStorage";
 import {
-  importFromLocalStorage,
-  importUsernameFromLocalStorage,
-} from "./data/localStorage";
+  canvasStorageUnavailableAtom,
+  refreshCanvasState,
+} from "./data/canvasAtoms";
+import { bootstrapCanvases } from "./data/canvasMigration";
+import { loadActiveCanvasState } from "./data/canvasStore";
 
 import { loadFilesFromFirebase } from "./data/firebase";
 import {
@@ -230,7 +233,7 @@ const initializeScene = async (opts: {
   );
   const externalUrlMatch = window.location.hash.match(/^#url=(.*)$/);
 
-  const localDataState = importFromLocalStorage();
+  const localDataState = await loadActiveCanvasState();
 
   let scene: Omit<
     RestoredDataState,
@@ -562,10 +565,23 @@ const ExcalidrawWrapper = () => {
       return;
     }
 
-    initializeScene({ collabAPI, excalidrawAPI }).then(async (data) => {
-      loadImages(data, /* isInitialLoad */ true);
-      initialStatePromiseRef.current.promise.resolve(data.scene);
-    });
+    bootstrapCanvases()
+      .then(async (index) => {
+        if (!index) {
+          appJotaiStore.set(canvasStorageUnavailableAtom, true);
+        } else {
+          try {
+            await refreshCanvasState();
+          } catch (error) {
+            console.error(error);
+          }
+        }
+        return initializeScene({ collabAPI, excalidrawAPI });
+      })
+      .then(async (data) => {
+        loadImages(data, /* isInitialLoad */ true);
+        initialStatePromiseRef.current.promise.resolve(data.scene);
+      });
 
     const onHashChange = async (event: HashChangeEvent) => {
       event.preventDefault();
@@ -604,12 +620,18 @@ const ExcalidrawWrapper = () => {
       ) {
         // don't sync if local state is newer or identical to browser state
         if (isBrowserStorageStateNewer(STORAGE_KEYS.VERSION_DATA_STATE)) {
-          const localDataState = importFromLocalStorage();
+          // keep the sidebar list in sync with other tabs
+          refreshCanvasState();
           const username = importUsernameFromLocalStorage();
           setLangCode(getPreferredLanguage());
-          excalidrawAPI.updateScene({
-            ...localDataState,
-            captureUpdate: CaptureUpdateAction.NEVER,
+          loadActiveCanvasState().then((localDataState) => {
+            // null: this tab's canvas was deleted elsewhere; keep the editor as is
+            if (localDataState) {
+              excalidrawAPI.updateScene({
+                ...localDataState,
+                captureUpdate: CaptureUpdateAction.NEVER,
+              });
+            }
           });
           LibraryIndexedDBAdapter.load().then((data) => {
             if (data) {
